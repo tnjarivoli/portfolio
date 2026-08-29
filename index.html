@@ -284,6 +284,7 @@
   body.edit-mode-off .watchlist-delete-btn,
   body.edit-mode-off .col-settings-btn,
   body.edit-mode-off #panelsSettingsBtn,
+  body.edit-mode-off #reportBtn,
   body.edit-mode-off .scorecard-lookup-box,
   body.edit-mode-off #scorecardLookupResult,
   body.edit-mode-off #soldFilterRow {
@@ -675,6 +676,7 @@
     <div class="grp">
       <button class="quiet" onclick="printDashboard()">🖶 Print</button>
       <button class="quiet" id="panelsSettingsBtn" onclick="openPanelSettingsModal()" title="Show or hide panels on this page">🗂️ Panels</button>
+      <button class="quiet" id="reportBtn" onclick="sendWeeklyReportNow()" title="Generate the weekly report now and email it to you">📧 Report</button>
     </div>
     <div class="synced-at" id="syncedAt">Last synced: —</div>
   </div>
@@ -5718,6 +5720,40 @@
 
   // ---- Print ----
   function printDashboard() { window.print(); }
+
+  // ---- Manual weekly report trigger (📧 Report button, next to Print) ----
+  // Generates the same Stock+ETF+Realized-Gains PDF the Friday 9:30pm trigger sends and emails it
+  // immediately (see WeeklyReport.gs). Useful both as an on-demand report and as a way to double-check
+  // the auto-generated one didn't come out blank/incorrect due to a sheet-data issue. Hidden in
+  // edit-mode-off (see CSS above) so a public viewer of the page can't trigger it.
+  async function sendWeeklyReportNow() {
+    const btn = document.getElementById('reportBtn');
+    if (!btn) return;
+    const originalLabel = btn.textContent;
+    const originalTitle = btn.title;
+    btn.disabled = true;
+    btn.textContent = '📧 Sending…';
+    try {
+      const resp = await fetch(SETTINGS_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: SETTINGS_TOKEN, action: 'sendWeeklyReport' })
+      });
+      const data = await resp.json();
+      if (data.status !== 'ok') throw new Error(data.message || 'Report generation failed');
+      btn.textContent = '✅ Sent';
+      btn.title = data.message || 'Report emailed.';
+    } catch (err) {
+      btn.textContent = '❌ Failed';
+      btn.title = 'Report failed: ' + (err && err.message ? err.message : err);
+    } finally {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        btn.title = originalTitle;
+      }, 4000);
+    }
+  }
 
   // ---- Panel visibility settings (🗂️ Panels button, next to Print) --------
   // Page-level analog of the per-table column-visibility settings below: instead of hiding columns
