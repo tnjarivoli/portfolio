@@ -247,8 +247,11 @@
     border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px;
     background: var(--surface-1);
   }
-  .scorecard-lookup-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .scorecard-lookup-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
   .scorecard-lookup-symbol { font-size: 14px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 7px; }
+  .scorecard-lookup-actions { display: flex; align-items: center; gap: 10px; }
+  .scorecard-lookup-actions .stock-add-btn { height: 26px; padding: 0 10px; font-size: 11.5px; }
+  .scorecard-lookup-actions .stock-add-btn:disabled { opacity: .6; cursor: default; }
   .scorecard-lookup-clear {
     font-family: inherit; font-size: 11px; font-weight: 600; color: var(--text-muted);
     background: transparent; border: none; cursor: pointer; padding: 3px 6px;
@@ -1017,11 +1020,22 @@
       <div class="panel-head-left">
         <h2>Stock Portfolio NAV vs Market Indices <span class="meta">— indexed to 100, adjusted for money added or withdrawn; stocks only, ETFs excluded</span></h2>
       </div>
-      <div class="nav-index-toggles" id="navIndexToggles" title="Stock Portfolio NAV always shows — pick which indices to compare it against (at least one must stay checked)">
+      <div class="nav-index-toggles" id="navIndexToggles" title="Stock Portfolio NAV always shows — pick which indices to compare it against (at least one must stay checked); your choice is saved automatically">
         <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 50" onchange="onNavIndexToggle(this)"> Nifty 50</label>
         <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 500" onchange="onNavIndexToggle(this)"> Nifty 500</label>
         <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty Midcap 150" onchange="onNavIndexToggle(this)"> Midcap 150</label>
         <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 200" onchange="onNavIndexToggle(this)"> Nifty 200</label>
+      </div>
+      <div class="col-settings">
+        <button type="button" class="col-settings-btn" id="navPeriodBtn" title="Chart period" onclick="togglePeriodMenu('nav')">⚙️</button>
+        <div class="col-settings-menu period-settings-menu" id="navPeriodMenu">
+          <div class="cs-title">Chart Period</div>
+          <label><input type="radio" name="navPeriodRadio" value="daily" checked onchange="selectChartPeriod('nav','daily')"> Daily</label>
+          <label><input type="radio" name="navPeriodRadio" value="weekly" onchange="selectChartPeriod('nav','weekly')"> Weekly</label>
+          <label><input type="radio" name="navPeriodRadio" value="monthly" onchange="selectChartPeriod('nav','monthly')"> Monthly</label>
+          <label><input type="radio" name="navPeriodRadio" value="yearly" onchange="selectChartPeriod('nav','yearly')"> Yearly</label>
+          <div class="cs-actions"><span class="cs-status" id="navPeriodStatus"></span></div>
+        </div>
       </div>
     </div>
     <div id="historyChartArea">
@@ -1038,6 +1052,17 @@
     <div class="panel-head">
       <div class="panel-head-left">
         <h2>XIRR Performance <span class="meta">— money-weighted annualized return, Total vs Stocks vs ETFs, snapshotted once a day</span></h2>
+      </div>
+      <div class="col-settings">
+        <button type="button" class="col-settings-btn" id="xirrPeriodBtn" title="Chart period" onclick="togglePeriodMenu('xirr')">⚙️</button>
+        <div class="col-settings-menu period-settings-menu" id="xirrPeriodMenu">
+          <div class="cs-title">Chart Period</div>
+          <label><input type="radio" name="xirrPeriodRadio" value="daily" checked onchange="selectChartPeriod('xirr','daily')"> Daily</label>
+          <label><input type="radio" name="xirrPeriodRadio" value="weekly" onchange="selectChartPeriod('xirr','weekly')"> Weekly</label>
+          <label><input type="radio" name="xirrPeriodRadio" value="monthly" onchange="selectChartPeriod('xirr','monthly')"> Monthly</label>
+          <label><input type="radio" name="xirrPeriodRadio" value="yearly" onchange="selectChartPeriod('xirr','yearly')"> Yearly</label>
+          <div class="cs-actions"><span class="cs-status" id="xirrPeriodStatus"></span></div>
+        </div>
       </div>
     </div>
     <div id="xirrChartArea">
@@ -1068,7 +1093,22 @@
   </div>
 
   <div class="panel" id="dailyPerfPanel" style="display:none">
-    <h2>Daily Performance <span class="meta">— Stock Portfolio vs Nifty 50, day-by-day</span></h2>
+    <div class="panel-head">
+      <div class="panel-head-left">
+        <h2>Stock Performance <span class="meta">— Stock Portfolio vs Nifty 50, period-over-period</span></h2>
+      </div>
+      <div class="col-settings">
+        <button type="button" class="col-settings-btn" id="perfPeriodBtn" title="Chart period" onclick="togglePeriodMenu('perf')">⚙️</button>
+        <div class="col-settings-menu period-settings-menu" id="perfPeriodMenu">
+          <div class="cs-title">Chart Period</div>
+          <label><input type="radio" name="perfPeriodRadio" value="daily" checked onchange="selectChartPeriod('perf','daily')"> Daily</label>
+          <label><input type="radio" name="perfPeriodRadio" value="weekly" onchange="selectChartPeriod('perf','weekly')"> Weekly</label>
+          <label><input type="radio" name="perfPeriodRadio" value="monthly" onchange="selectChartPeriod('perf','monthly')"> Monthly</label>
+          <label><input type="radio" name="perfPeriodRadio" value="yearly" onchange="selectChartPeriod('perf','yearly')"> Yearly</label>
+          <div class="cs-actions"><span class="cs-status" id="perfPeriodStatus"></span></div>
+        </div>
+      </div>
+    </div>
     <div id="dailyPerfChartArea"></div>
   </div>
 
@@ -1400,12 +1440,54 @@
   let lastScorecardRows = []; // Growth Scorecard's computed rows (Fundamentals ∪ Watchlist), cached for click re-renders
   let selectedInsightSymbol = null; // which holding's insights are currently shown in the Company Insights panel
   let selectedScoreSymbol = null; // which symbol's breakdown is currently shown in the Growth Scorecard panel
+  let scorecardLookupSymbol = null; // the symbol currently shown in the ad-hoc "look up any stock" result card, if any — read by addLookupSymbolToWatchlist() so the button doesn't have to re-parse the input box
   let lastXirrHistory = []; // [{date, total, stock, etf}] sorted ascending by date, read from the daily-snapshot XirrHistory tab — total/stock/etf are % or null
   let nseHolidays = new Set(); // 'YYYY-MM-DD' keys read from column A of the "Holidays" tab — NSE market holidays for the year
   let moversPeriodTouchedByUser = false; // true once the user picks a Top Movers period themselves — stops the holiday-aware default from overriding their choice after a late-arriving Holidays fetch
   // Which index lines are checked on in the "Portfolio NAV vs Market Indices" chart — Portfolio NAV itself
   // always shows and has no checkbox; at least one index must stay checked (enforced in onNavIndexToggle).
+  // The 4 keys here are also the full set of possible checkbox choices — matches the 4 hardcoded <input>s
+  // in #navIndexToggles — reused below (NAV_TOGGLE_KEYS) as the whitelist when computing what to persist.
   let navChartVisibleIndices = new Set(['Nifty 50', 'Nifty 500', 'Nifty Midcap 150', 'Nifty 200']);
+  const NAV_TOGGLE_KEYS = ['Nifty 50', 'Nifty 500', 'Nifty Midcap 150', 'Nifty 200'];
+
+  // Single-select period for the two charts below — 'daily' | 'weekly' | 'monthly' | 'yearly'. Each is
+  // persisted to the sheet independently (gear icon on each panel) via saveChartPeriodSetting(), and
+  // restored in syncDashboardSettings() so the choice survives across sessions until changed again.
+  let navChartPeriod = 'daily';
+  let stockPerfPeriod = 'daily';
+  let xirrChartPeriod = 'daily';
+  const CHART_PERIODS = ['daily', 'weekly', 'monthly', 'yearly'];
+
+  // Collapses a daily points array down to one point per week/month/year — the LAST point seen in each
+  // bucket wins (i.e. each period's closing value), which is the standard way to resample a daily series
+  // to a coarser granularity for both a level chart (NAV vs Indices) and a period-over-period bar chart
+  // (Stock Performance) — both read off the same resampled list, just with different math on top of it.
+  function resamplePointsForPeriod(points, period) {
+    if (!period || period === 'daily' || points.length <= 1) return points;
+    const keyFor = period === 'weekly'
+      ? (d) => { const dow = d.getDay(); const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (dow === 0 ? 6 : dow - 1)); return mon.getFullYear() * 10000 + (mon.getMonth() + 1) * 100 + mon.getDate(); }
+      : period === 'monthly'
+      ? (d) => d.getFullYear() * 100 + (d.getMonth() + 1)
+      : (d) => d.getFullYear(); // yearly
+    const out = [];
+    let lastKey = null;
+    points.forEach(p => {
+      const k = keyFor(p.date);
+      if (k !== lastKey) { out.push(p); lastKey = k; }
+      else { out[out.length - 1] = p; }
+    });
+    return out;
+  }
+
+  // Shared "this period doesn't have enough resampled data points yet" message — used by every period-
+  // selectable chart (Stock Performance, XIRR Performance) so a coarse period on a short history explains
+  // itself instead of the panel just going blank, while keeping the gear icon reachable to switch back.
+  function periodTooSparseMessage(period) {
+    const nouns = { daily: 'days', weekly: 'weeks', monthly: 'months', yearly: 'years' };
+    const noun = nouns[period] || 'periods';
+    return `<div class="history-empty">Not enough history yet for a ${escapeHtmlText(period)} view — your data doesn't span two full ${noun} yet. Try Daily or Weekly (⚙️ above), or check back once more history has built up.</div>`;
+  }
 
   // Formats "today" as a 'YYYY-MM-DD' key in IST specifically (not the viewer's local timezone) — matches
   // how defaultMoversPeriod()/isMarketOpenNow() already compute "today" for NSE-hours purposes. The 'en-CA'
@@ -1887,7 +1969,7 @@
     // Donut and history/daily-perf chart colors are picked at draw time, not via CSS vars — redraw so they match the new theme.
     if (lastStocks.length) renderAnalysis(lastStocks, computeAgg(lastStocks).value);
     if (lastStocks.length || lastEtfs.length) renderAllocation(lastStocks, lastEtfs, computeAgg(lastStocks).value, computeAgg(lastEtfs).value);
-    if (lastHistoryPoints.length >= 2) { renderNavVsIndicesChart(); renderDailyPerfChart(lastHistoryPoints); }
+    if (lastHistoryPoints.length >= 2) { renderNavVsIndicesChart(); renderDailyPerfChart(); }
   }
 
   // ---- JSONP loader (bypasses CORS entirely — script tags aren't fetch/XHR) ----
@@ -2511,6 +2593,7 @@
       navChartVisibleIndices.add(key);
     }
     renderNavVsIndicesChart();
+    saveNavIndicesSetting(); // best-effort persist — no-op locally if it fails (e.g. Edit Mode off)
   }
 
   // Top 3 gainers/losers among stocks (the "Portfolio" tab) only, for the selected period. "Today" and
@@ -3188,7 +3271,7 @@
       // Re-render both charts that depend on index data now that it may be available — independent of
       // syncHistory()'s own timing, since syncHistory() and syncIndices() resolve concurrently.
       renderNavVsIndicesChart();
-      if (lastHistoryPoints.length >= 2) renderDailyPerfChart(lastHistoryPoints);
+      if (lastHistoryPoints.length >= 2) renderDailyPerfChart();
     } catch (err) {
       lastIndices = {};
       renderIndicesTiles({}); // let the combined live+historical check below decide whether to hide the panel
@@ -3864,12 +3947,17 @@
       document.querySelectorAll('#scorecardSymbolRow .scorecard-symbol-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('scorecardBody').innerHTML = '';
 
+      scorecardLookupSymbol = row.symbol;
       resultBox.style.display = '';
       resultBox.innerHTML = `
         <div class="scorecard-lookup-head">
           <span class="scorecard-lookup-symbol">${escapeHtmlText(row.symbol)} <span class="scorecard-wl-tag">Lookup — not tracked</span></span>
-          <button class="scorecard-lookup-clear" onclick="clearScorecardLookup()">✕ Clear</button>
+          <span class="scorecard-lookup-actions">
+            <button class="stock-add-btn" id="scorecardAddWatchlistBtn" onclick="addLookupSymbolToWatchlist()">+ Add to Watchlist</button>
+            <button class="scorecard-lookup-clear" onclick="clearScorecardLookup()">✕ Clear</button>
+          </span>
         </div>
+        <div class="stock-modal-status" id="scorecardAddWatchlistStatus" style="margin:-6px 0 12px"></div>
         ${buildScorecardBodyHtmlV2(score)}
       `;
     } catch (err) {
@@ -3880,12 +3968,51 @@
     }
   }
 
+  // "+ Add to Watchlist" button on the ad-hoc lookup result card — lets a symbol found via "Look up any
+  // stock" be tracked going forward without retyping it into the separate Add Watchlist modal. Reuses the
+  // exact same addWatchlist Web App action (and its server-side EditMode gate) as that modal; the only
+  // difference is where the status message is shown. The backend already checks both Holdings and
+  // Watchlist for an existing symbol and says which one it found it in — this just surfaces that message
+  // rather than inventing its own duplicate check.
+  async function addLookupSymbolToWatchlist() {
+    const symbol = scorecardLookupSymbol;
+    if (!symbol) return;
+    const btn = document.getElementById('scorecardAddWatchlistBtn');
+    const status = document.getElementById('scorecardAddWatchlistStatus');
+    btn.disabled = true;
+    status.textContent = 'Adding…';
+    status.className = 'stock-modal-status';
+    try {
+      const resp = await fetch(SETTINGS_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: SETTINGS_TOKEN, action: 'addWatchlist', symbol })
+      });
+      const data = await resp.json();
+      if (data.status !== 'ok') {
+        status.textContent = data.message || 'Could not add — try again.';
+        status.className = 'stock-modal-status err';
+        btn.disabled = false;
+        return;
+      }
+      status.textContent = 'Added to Watchlist ✓ — fundamentals will populate on the next scheduled refresh.';
+      status.className = 'stock-modal-status ok';
+      btn.textContent = '✓ On Watchlist';
+      await syncWatchlist(); // picks up the new (still-blank) row so it shows up in the Watchlist table & scorecard pills right away
+    } catch (err) {
+      status.textContent = 'Could not add — try again.';
+      status.className = 'stock-modal-status err';
+      btn.disabled = false;
+    }
+  }
+
   // Hides/empties just the lookup result card, without touching the input text or status message — used
   // when a pill click needs to make room for the tracked symbol's card (so a half-typed lookup query
   // isn't wiped out just because the user clicked a pill).
   function hideScorecardLookupResult() {
     document.getElementById('scorecardLookupResult').style.display = 'none';
     document.getElementById('scorecardLookupResult').innerHTML = '';
+    scorecardLookupSymbol = null;
   }
 
   function clearScorecardLookup() {
@@ -4656,7 +4783,7 @@
       applyNavSeries(points); // adds a .nav field to each point, cash-flow-adjusted like a mutual fund NAV
       lastHistoryPoints = points;
       renderNavVsIndicesChart();
-      renderDailyPerfChart(points);
+      renderDailyPerfChart();
       renderRiskStats(points);
       computeXirrTile(); // History's earliest date can improve the XIRR fallback for undated holdings
     } catch (err) {
@@ -4847,7 +4974,7 @@
   // params, since syncHistory() and syncIndices() resolve independently (Promise.all) and each needs to
   // trigger a re-render as soon as its own data lands, without waiting on the other.
   function renderNavVsIndicesChart() {
-    const points = lastHistoryPoints;
+    const points = resamplePointsForPeriod(lastHistoryPoints, navChartPeriod);
     if (!points.length) return; // syncHistory hasn't produced NAV points yet — leave the empty-state showing
 
     const W = 760, H = 220, padL = 46, padR = 14, padT = 14, padB = 26;
@@ -4903,8 +5030,12 @@
       gridLabels += `<text class="axis-label" x="${padL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${(pctFromBase >= 0 ? '+' : '')}${pctFromBase.toFixed(0)}%</text>`;
     }
 
-    // A handful of evenly-spaced date ticks along the x-axis
-    const TICK_COUNT = Math.min(6, points.length);
+    // A handful of evenly-spaced date ticks along the x-axis. Capped higher than a typical "6 labels"
+    // chart on purpose: with few points (the common case early on, e.g. 7-8 trading days so far) a low
+    // cap's rounding can skip a day's label entirely (looks like that day's data is "missing" even though
+    // it's plotted) — showing every point up to CHART_TICK_LABEL_CAP avoids that.
+    const CHART_TICK_LABEL_CAP = 12;
+    const TICK_COUNT = Math.min(CHART_TICK_LABEL_CAP, points.length);
     let xLabels = '';
     for (let t = 0; t < TICK_COUNT; t++) {
       const i = TICK_COUNT === 1 ? 0 : Math.round((t / (TICK_COUNT - 1)) * (points.length - 1));
@@ -5085,8 +5216,14 @@
   }
 
   function renderXirrPerformanceChart() {
-    const points = lastXirrHistory;
-    if (points.length < 2) { showXirrHistoryEmpty(); return; }
+    if (lastXirrHistory.length < 2) { showXirrHistoryEmpty(); return; } // genuinely no history yet at all
+    const points = resamplePointsForPeriod(lastXirrHistory, xirrChartPeriod);
+    if (points.length < 2) {
+      // Not "no history" — just this period's resampling collapsed everything into <2 buckets. Panel stays
+      // put (it was never hidden entirely for this chart), just swap in a period-aware explanation.
+      document.getElementById('xirrChartArea').innerHTML = periodTooSparseMessage(xirrChartPeriod);
+      return;
+    }
 
     const W = 760, H = 220, padL = 46, padR = 14, padT = 14, padB = 26;
     const plotW = W - padL - padR, plotH = H - padT - padB;
@@ -5129,7 +5266,7 @@
       gridLabels += `<text class="axis-label" x="${padL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${v.toFixed(0)}%</text>`;
     }
 
-    const TICK_COUNT = Math.min(6, points.length);
+    const TICK_COUNT = Math.min(12, points.length); // see CHART_TICK_LABEL_CAP note in renderNavVsIndicesChart — same reasoning
     let xLabels = '';
     for (let t = 0; t < TICK_COUNT; t++) {
       const i = TICK_COUNT === 1 ? 0 : Math.round((t / (TICK_COUNT - 1)) * (points.length - 1));
@@ -5219,10 +5356,20 @@
   // ---- Daily performance chart (day-over-day % change, Portfolio vs Nifty — "did I beat the market today?") ----
   const DAILY_PERF_MAX_SESSIONS = 20;
 
-  function renderDailyPerfChart(points) {
-    // Portfolio side is derived purely from consecutive History rows. Nifty side is looked up from the
-    // real Nifty 50 index's daily snapshots (Indices tab) by date, rather than the old NiftyBees ETF
-    // price that used to live on the History row itself — same underlying index the NAV comparison
+  // Reads lastHistoryPoints itself (like renderNavVsIndicesChart) rather than taking a params, resampled
+  // to whichever period is currently selected (stockPerfPeriod) — daily/weekly/monthly/yearly period-over-
+  // period % change, Portfolio vs Nifty. "Daily" is just the period=1-day case of the same computation.
+  function renderDailyPerfChart() {
+    const panelEl = document.getElementById('dailyPerfPanel');
+    if (lastHistoryPoints.length < 2) { panelEl.style.display = 'none'; return; } // genuinely no history yet at all
+    // There IS history — keep the panel (and its period gear) visible from here on even if the currently
+    // selected period can't show anything yet, so the user isn't stuck unable to switch back to a finer one.
+    showPanelUnlessHidden_(panelEl);
+
+    const points = resamplePointsForPeriod(lastHistoryPoints, stockPerfPeriod);
+    // Portfolio side is derived purely from consecutive (resampled) History rows. Nifty side is looked up
+    // from the real Nifty 50 index's daily snapshots (Indices tab) by date, rather than the old NiftyBees
+    // ETF price that used to live on the History row itself — same underlying index the NAV comparison
     // chart above now uses, so "did I beat the market today?" means the same market in both charts.
     const nifty50Map = (lastIndices['Nifty 50'] && lastIndices['Nifty 50'].length) ? buildIndexValueMap(lastIndices['Nifty 50']) : null;
     const daily = [];
@@ -5237,11 +5384,16 @@
       }
       daily.push({ date: cur.date, portPct, niftyPct });
     }
-    if (!daily.length) { document.getElementById('dailyPerfPanel').style.display = 'none'; return; }
+    if (!daily.length) {
+      // Not "no history" (guarded above) — just this particular period's resampling collapsed everything
+      // into fewer than 2 buckets (e.g. 8 days of history is all one calendar month, so "monthly" has
+      // nothing to diff yet). Say so instead of going blank, and leave the gear icon reachable.
+      document.getElementById('dailyPerfChartArea').innerHTML = periodTooSparseMessage(stockPerfPeriod);
+      return;
+    }
 
     const truncated = daily.length > DAILY_PERF_MAX_SESSIONS;
     const shown = truncated ? daily.slice(daily.length - DAILY_PERF_MAX_SESSIONS) : daily;
-    showPanelUnlessHidden_(document.getElementById('dailyPerfPanel'));
 
     const W = 760, H = 220, padL = 46, padR = 14, padT = 14, padB = 26;
     const plotW = W - padL - padR, plotH = H - padT - padB;
@@ -5296,7 +5448,7 @@
       gridLabels += `<text class="axis-label" x="${padL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${(v >= 0 ? '+' : '')}${v.toFixed(1)}%</text>`;
     }
 
-    const TICK_COUNT = Math.min(6, n);
+    const TICK_COUNT = Math.min(12, n); // see CHART_TICK_LABEL_CAP note in renderNavVsIndicesChart — same reasoning
     let xLabels = '';
     for (let t = 0; t < TICK_COUNT; t++) {
       const i = TICK_COUNT === 1 ? 0 : Math.round((t / (TICK_COUNT - 1)) * (n - 1));
@@ -5784,7 +5936,7 @@
     { key: 'navChart',              label: 'Stock Portfolio NAV vs Market Indices',     elementIds: ['navChartPanel'] },
     { key: 'xirr',                  label: 'XIRR Performance',                          elementIds: ['xirrPanel'] },
     { key: 'riskStats',             label: 'Stock Portfolio Risk Stats',                elementIds: ['riskStatsPanel'] },
-    { key: 'dailyPerf',             label: 'Daily Performance',                         elementIds: ['dailyPerfPanel'] },
+    { key: 'dailyPerf',             label: 'Stock Performance',                         elementIds: ['dailyPerfPanel'] },
     { key: 'taxPlanning',           label: 'Tax Planning Reminders',                    elementIds: ['taxPlanningPanel'] },
     { key: 'news',                  label: 'Company News',                              elementIds: ['newsPanel'] },
     { key: 'analyst',               label: 'Analyst Consensus',                         elementIds: ['analystPanel'] },
@@ -6492,6 +6644,83 @@
     }
   }
 
+  // Persists which NAV-chart index checkboxes are checked — stored as the INVERSE (unchecked) list so it
+  // reuses the exact same generic table/row mechanism as every hiddenColumns save above. Fired on every
+  // toggle (see onNavIndexToggle); intentionally silent on failure (e.g. Edit Mode off) since there's no
+  // status readout next to plain checkboxes — the chart itself still updates locally either way, it just
+  // won't have stuck for next time.
+  async function saveNavIndicesSetting() {
+    const hidden = NAV_TOGGLE_KEYS.filter(k => !navChartVisibleIndices.has(k));
+    try {
+      const resp = await fetch(SETTINGS_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: SETTINGS_TOKEN, table: 'NavIndices', hiddenColumns: hidden })
+      });
+      await resp.json();
+    } catch (err) { /* best-effort — next reload just falls back to whatever was last saved (or all-checked) */ }
+  }
+
+  // Gear-icon dropdown for the two period-select menus (NAV chart / Stock Performance chart) — same show/
+  // hide behavior as toggleColSettingsMenu, kept separate since these menus aren't per-table column lists.
+  function togglePeriodMenu(which) {
+    const menu = document.getElementById(which + 'PeriodMenu');
+    const wasOpen = menu.classList.contains('show');
+    document.querySelectorAll('.col-settings-menu.show').forEach(m => m.classList.remove('show'));
+    if (!wasOpen) menu.classList.add('show');
+  }
+
+  // Applies the chosen period immediately (so the chart updates right away, same as the column-visibility
+  // checkboxes) and persists it in the background — no separate Save button since only one value can ever
+  // be selected at a time (radio buttons), unlike the multi-select column menus.
+  function selectChartPeriod(which, period) {
+    if (which === 'nav') {
+      navChartPeriod = period;
+      renderNavVsIndicesChart();
+    } else if (which === 'perf') {
+      stockPerfPeriod = period;
+      if (lastHistoryPoints.length >= 2) renderDailyPerfChart();
+    } else if (which === 'xirr') {
+      xirrChartPeriod = period;
+      renderXirrPerformanceChart();
+    }
+    document.getElementById(which + 'PeriodMenu').classList.remove('show');
+    saveChartPeriodSetting(which, period);
+  }
+
+  const CHART_PERIOD_TABLES = { nav: 'NavPeriod', perf: 'PerfPeriod', xirr: 'XirrPeriod' };
+
+  async function saveChartPeriodSetting(which, period) {
+    const table = CHART_PERIOD_TABLES[which];
+    const statusEl = document.getElementById(which + 'PeriodStatus');
+    if (statusEl) statusEl.textContent = 'Saving…';
+    try {
+      const resp = await fetch(SETTINGS_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: SETTINGS_TOKEN, table, hiddenColumns: [period] })
+      });
+      const data = await resp.json();
+      if (data.status !== 'ok') throw new Error(data.message || 'save failed');
+      if (statusEl) { statusEl.textContent = 'Saved ✓'; setTimeout(() => { statusEl.textContent = ''; }, 1500); }
+    } catch (err) {
+      if (statusEl) statusEl.textContent = 'Save failed';
+    }
+  }
+
+  // Reflects navChartVisibleIndices back onto the actual checkboxes — needed once at startup after
+  // syncDashboardSettings() loads a saved choice that differs from the hardcoded-checked HTML default.
+  function syncNavToggleCheckboxes() {
+    document.querySelectorAll('#navIndexToggles input[type="checkbox"]').forEach(cb => {
+      cb.checked = navChartVisibleIndices.has(cb.getAttribute('data-index'));
+    });
+  }
+
+  // Reflects a loaded period choice back onto its radio group — same startup-only need as above.
+  function syncPeriodMenuUI(which, period) {
+    document.querySelectorAll('input[name="' + which + 'PeriodRadio"]').forEach(r => { r.checked = (r.value === period); });
+  }
+
   // Reads the saved hidden-columns choice from the DashboardSettings Web App at startup, so the column
   // layout you last saved shows immediately rather than defaulting to "everything visible". Runs inside
   // the same Promise.all as syncFundamentals()/syncWatchlist()/etc. (see syncFromSheet()) — safe regardless
@@ -6507,11 +6736,31 @@
       if (Array.isArray(data.settings.Watchlist)) watchlistHiddenColumns = new Set(data.settings.Watchlist);
       if (Array.isArray(data.settings.Sold)) soldHiddenColumns = new Set(data.settings.Sold);
       if (Array.isArray(data.settings.Panels)) hiddenPanelGroups = new Set(data.settings.Panels);
+      if (Array.isArray(data.settings.NavIndices)) {
+        const hiddenIdx = new Set(data.settings.NavIndices);
+        const visible = new Set(NAV_TOGGLE_KEYS.filter(k => !hiddenIdx.has(k)));
+        navChartVisibleIndices = visible.size ? visible : new Set(NAV_TOGGLE_KEYS); // guard against a corrupt/all-hidden save
+        syncNavToggleCheckboxes();
+      }
+      if (Array.isArray(data.settings.NavPeriod) && data.settings.NavPeriod.length && CHART_PERIODS.includes(data.settings.NavPeriod[0])) {
+        navChartPeriod = data.settings.NavPeriod[0];
+        syncPeriodMenuUI('nav', navChartPeriod);
+      }
+      if (Array.isArray(data.settings.PerfPeriod) && data.settings.PerfPeriod.length && CHART_PERIODS.includes(data.settings.PerfPeriod[0])) {
+        stockPerfPeriod = data.settings.PerfPeriod[0];
+        syncPeriodMenuUI('perf', stockPerfPeriod);
+      }
+      if (Array.isArray(data.settings.XirrPeriod) && data.settings.XirrPeriod.length && CHART_PERIODS.includes(data.settings.XirrPeriod[0])) {
+        xirrChartPeriod = data.settings.XirrPeriod[0];
+        syncPeriodMenuUI('xirr', xirrChartPeriod);
+      }
       applyEditModeUI(data.editMode === 1);
       render(lastStocks, lastEtfs);
       if (lastFundamentals.length) renderFundamentals(lastFundamentals);
       if (lastWatchlist.length) renderWatchlist(lastWatchlist);
       if (lastSoldStocks.length) renderSoldStocks(lastSoldStocks);
+      if (lastHistoryPoints.length >= 2) { renderNavVsIndicesChart(); renderDailyPerfChart(); }
+      if (lastXirrHistory.length >= 2) renderXirrPerformanceChart();
       enforceHiddenPanels();
     } catch (err) {
       // Web App unreachable (offline, not yet deployed, etc.) — dashboard just falls back to showing
