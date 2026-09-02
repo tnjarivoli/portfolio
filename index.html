@@ -1098,6 +1098,17 @@
         <h2>Stock Performance <span class="meta">— Stock Portfolio vs Nifty 50, period-over-period</span></h2>
       </div>
       <div class="col-settings">
+        <button type="button" class="col-settings-btn" id="perfBenchmarkBtn" title="Choose benchmark index" onclick="togglePerfBenchmarkMenu()">📊</button>
+        <div class="col-settings-menu period-settings-menu" id="perfBenchmarkMenu">
+          <div class="cs-title">Benchmark</div>
+          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty 50" checked onchange="selectPerfBenchmark('Nifty 50')"> Nifty 50</label>
+          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty 500" onchange="selectPerfBenchmark('Nifty 500')"> Nifty 500</label>
+          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty Midcap 150" onchange="selectPerfBenchmark('Nifty Midcap 150')"> Nifty Midcap 150</label>
+          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty 200" onchange="selectPerfBenchmark('Nifty 200')"> Nifty 200</label>
+          <div class="cs-actions"><span class="cs-status" id="perfBenchmarkStatus"></span></div>
+        </div>
+      </div>
+      <div class="col-settings">
         <button type="button" class="col-settings-btn" id="perfPeriodBtn" title="Chart period" onclick="togglePeriodMenu('perf')">⚙️</button>
         <div class="col-settings-menu period-settings-menu" id="perfPeriodMenu">
           <div class="cs-title">Chart Period</div>
@@ -1458,6 +1469,11 @@
   let stockPerfPeriod = 'daily';
   let xirrChartPeriod = 'daily';
   const CHART_PERIODS = ['daily', 'weekly', 'monthly', 'yearly'];
+
+  // Single-select benchmark index for the Stock Performance chart -- which of the same 4 NAV_TOGGLE_KEYS
+  // indices it diffs the portfolio against. Persisted via a new 'PerfBenchmark' settings table (reuses
+  // NAV_TOGGLE_KEYS as its whitelist, same generic table/row mechanism as everything else here).
+  let perfBenchmarkIndex = 'Nifty 50';
 
   // Collapses a daily points array down to one point per week/month/year — the LAST point seen in each
   // bucket wins (i.e. each period's closing value), which is the standard way to resample a daily series
@@ -5366,20 +5382,25 @@
     // selected period can't show anything yet, so the user isn't stuck unable to switch back to a finer one.
     showPanelUnlessHidden_(panelEl);
 
+    const metaEl = document.querySelector('#dailyPerfPanel .meta');
+    if (metaEl) metaEl.textContent = '— Stock Portfolio vs ' + perfBenchmarkIndex + ', period-over-period';
+
     const points = resamplePointsForPeriod(lastHistoryPoints, stockPerfPeriod);
-    // Portfolio side is derived purely from consecutive (resampled) History rows. Nifty side is looked up
-    // from the real Nifty 50 index's daily snapshots (Indices tab) by date, rather than the old NiftyBees
-    // ETF price that used to live on the History row itself — same underlying index the NAV comparison
-    // chart above now uses, so "did I beat the market today?" means the same market in both charts.
-    const nifty50Map = (lastIndices['Nifty 50'] && lastIndices['Nifty 50'].length) ? buildIndexValueMap(lastIndices['Nifty 50']) : null;
+    // Portfolio side is derived purely from consecutive (resampled) History rows. Benchmark side is looked
+    // up from the currently-selected index's daily snapshots (Indices tab) by date, rather than the old
+    // NiftyBees ETF price that used to live on the History row itself — same underlying index the NAV
+    // comparison chart above uses for the same index, so "did I beat the market today?" stays consistent.
+    // perfBenchmarkIndex defaults to 'Nifty 50' but is a single-select choice among NAV_TOGGLE_KEYS,
+    // persisted via the 📊 gear next to the period gear (see selectPerfBenchmark/savePerfBenchmarkSetting).
+    const benchmarkMap = (lastIndices[perfBenchmarkIndex] && lastIndices[perfBenchmarkIndex].length) ? buildIndexValueMap(lastIndices[perfBenchmarkIndex]) : null;
     const daily = [];
     for (let i = 1; i < points.length; i++) {
       const prev = points[i - 1], cur = points[i];
       const portPct = prev.nav ? ((cur.nav - prev.nav) / prev.nav) * 100 : null;
       let niftyPct = null;
-      if (nifty50Map) {
-        const prevV = nifty50Map.get(dateKeyOf(prev.date));
-        const curV = nifty50Map.get(dateKeyOf(cur.date));
+      if (benchmarkMap) {
+        const prevV = benchmarkMap.get(dateKeyOf(prev.date));
+        const curV = benchmarkMap.get(dateKeyOf(cur.date));
         if (isFinite(prevV) && isFinite(curV) && prevV) niftyPct = ((curV - prevV) / prevV) * 100;
       }
       daily.push({ date: cur.date, portPct, niftyPct });
@@ -5458,7 +5479,7 @@
     document.getElementById('dailyPerfChartArea').innerHTML = `
       <div class="history-legend">
         <div class="lg-item"><span class="swatch-key" style="background:${portColor}"></span>Stock Portfolio NAV</div>
-        <div class="lg-item"><span class="swatch-key" style="background:${niftyColor}"></span>Nifty 50${nifty50Map ? '' : ' <span class="chg-flat">(no data yet)</span>'}</div>
+        <div class="lg-item"><span class="swatch-key" style="background:${niftyColor}"></span>${escapeHtmlText(perfBenchmarkIndex)}${benchmarkMap ? '' : ' <span class="chg-flat">(no data yet)</span>'}</div>
         ${truncated ? `<div class="lg-item chg-flat">Showing last ${DAILY_PERF_MAX_SESSIONS} sessions</div>` : ''}
       </div>
       <div class="history-chart-wrap">
@@ -5516,7 +5537,7 @@
       tt.appendChild(row);
     };
     addRow('Stock Portfolio NAV', d.portPct !== null ? (d.portPct >= 0 ? '+' : '') + d.portPct.toFixed(2) + '%' : '—', palette[0]);
-    addRow('Nifty 50', d.niftyPct !== null ? (d.niftyPct >= 0 ? '+' : '') + d.niftyPct.toFixed(2) + '%' : '—', palette[1]);
+    addRow(perfBenchmarkIndex, d.niftyPct !== null ? (d.niftyPct >= 0 ? '+' : '') + d.niftyPct.toFixed(2) + '%' : '—', palette[1]);
     if (d.portPct !== null && d.niftyPct !== null) {
       const diff = d.portPct - d.niftyPct;
       const row = document.createElement('div'); row.className = 'tt-row';
@@ -6670,6 +6691,47 @@
     if (!wasOpen) menu.classList.add('show');
   }
 
+  // Gear-icon dropdown for the Stock Performance chart's benchmark-index picker (📊, next to the period
+  // gear) — same show/hide behavior as togglePeriodMenu, kept separate since it's not a period menu.
+  function togglePerfBenchmarkMenu() {
+    const menu = document.getElementById('perfBenchmarkMenu');
+    const wasOpen = menu.classList.contains('show');
+    document.querySelectorAll('.col-settings-menu.show').forEach(m => m.classList.remove('show'));
+    if (!wasOpen) menu.classList.add('show');
+  }
+
+  // Single-select benchmark change — applies immediately (radio buttons, so only one value is ever
+  // selected) and persists in the background, same pattern as selectChartPeriod.
+  function selectPerfBenchmark(index) {
+    perfBenchmarkIndex = index;
+    if (lastHistoryPoints.length >= 2) renderDailyPerfChart();
+    document.getElementById('perfBenchmarkMenu').classList.remove('show');
+    savePerfBenchmarkSetting(index);
+  }
+
+  async function savePerfBenchmarkSetting(index) {
+    const statusEl = document.getElementById('perfBenchmarkStatus');
+    if (statusEl) statusEl.textContent = 'Saving…';
+    try {
+      const resp = await fetch(SETTINGS_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: SETTINGS_TOKEN, table: 'PerfBenchmark', hiddenColumns: [index] })
+      });
+      const data = await resp.json();
+      if (data.status !== 'ok') throw new Error(data.message || 'save failed');
+      if (statusEl) { statusEl.textContent = 'Saved ✓'; setTimeout(() => { statusEl.textContent = ''; }, 1500); }
+    } catch (err) {
+      if (statusEl) statusEl.textContent = 'Save failed';
+    }
+  }
+
+  // Reflects a loaded benchmark choice back onto its radio group — same startup-only need as
+  // syncPeriodMenuUI below.
+  function syncPerfBenchmarkUI() {
+    document.querySelectorAll('input[name="perfBenchmarkRadio"]').forEach(r => { r.checked = (r.value === perfBenchmarkIndex); });
+  }
+
   // Applies the chosen period immediately (so the chart updates right away, same as the column-visibility
   // checkboxes) and persists it in the background — no separate Save button since only one value can ever
   // be selected at a time (radio buttons), unlike the multi-select column menus.
@@ -6749,6 +6811,10 @@
       if (Array.isArray(data.settings.PerfPeriod) && data.settings.PerfPeriod.length && CHART_PERIODS.includes(data.settings.PerfPeriod[0])) {
         stockPerfPeriod = data.settings.PerfPeriod[0];
         syncPeriodMenuUI('perf', stockPerfPeriod);
+      }
+      if (Array.isArray(data.settings.PerfBenchmark) && data.settings.PerfBenchmark.length && NAV_TOGGLE_KEYS.includes(data.settings.PerfBenchmark[0])) {
+        perfBenchmarkIndex = data.settings.PerfBenchmark[0];
+        syncPerfBenchmarkUI();
       }
       if (Array.isArray(data.settings.XirrPeriod) && data.settings.XirrPeriod.length && CHART_PERIODS.includes(data.settings.XirrPeriod[0])) {
         xirrChartPeriod = data.settings.XirrPeriod[0];
