@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Portfolio — Mobile</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --surface-2:      #f2f1ec;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --border:         rgba(11,11,11,0.10);
+    --card-shadow:    0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.05);
+    --status-good:      #0ca30c;
+    --status-critical:  #d03b3b;
+    --accent:           #3987e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --surface-2: #242422; --page-plane: #0d0d0d;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --border: rgba(255,255,255,0.10); --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+      --status-good: #0ca30c; --status-critical: #e66767; --accent: #5b9fef;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --surface-2: #242422; --page-plane: #0d0d0d;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --border: rgba(255,255,255,0.10); --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    --status-good: #0ca30c; --status-critical: #e66767; --accent: #5b9fef;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    background: var(--page-plane); color: var(--text-primary); font-size: 14px;
+    padding-bottom: 40px;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 12px 12px 0; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px 12px; }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  .topbar .sub { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+  .topbar-actions { display: flex; align-items: center; gap: 6px; }
+  .icon-btn {
+    font-size: 13px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 9px; cursor: pointer; color: var(--text-secondary); line-height: 1;
+  }
+  .icon-btn:active { transform: scale(0.96); }
+
+  .status-line { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-muted); margin: -4px 0 12px; padding: 0 2px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex: none; }
+  .status-dot.ok { background: var(--status-good); }
+  .status-dot.err { background: var(--status-critical); }
+  .status-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .error-banner {
+    display: none; background: color-mix(in srgb, var(--status-critical) 10%, var(--surface-1));
+    border: 1px solid color-mix(in srgb, var(--status-critical) 35%, transparent); border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; margin-bottom: 12px; line-height: 1.5;
+  }
+
+  .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; box-shadow: var(--card-shadow); text-align: center; }
+  .stat-tile .label { font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-tile .value { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; font-weight: 700; }
+  .stat-tile .sub { font-size: 10px; margin-top: 2px; }
+
+  .section { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--card-shadow); margin-bottom: 14px; overflow: hidden; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 10px; }
+  .section-head h2 { font-size: 13.5px; margin: 0; font-weight: 700; }
+  .section-head .meta { font-size: 10.5px; color: var(--text-muted); font-weight: 400; margin-top: 1px; }
+  .add-btn {
+    font-size: 11.5px; font-weight: 600; color: #fff; background: var(--accent); border: none;
+    border-radius: 8px; padding: 6px 11px; cursor: pointer;
+  }
+  .add-btn:active { transform: scale(0.96); }
+  body.edit-mode-off .write-only { display: none !important; }
+
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 100%; }
+  thead th {
+    position: sticky; top: 0; background: var(--surface-2); color: var(--text-muted); font-weight: 600;
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: .02em; text-align: right; white-space: nowrap;
+    padding: 7px 8px;
+  }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 8px; text-align: right; white-space: nowrap; border-top: 1px solid var(--border); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  tbody td:first-child { text-align: left; font-family: inherit; font-weight: 600; }
+  tbody tr:active { background: var(--surface-2); }
+  tfoot td { padding: 8px; text-align: right; font-weight: 700; border-top: 2px solid var(--border); background: var(--surface-2); white-space: nowrap; }
+  tfoot td:first-child { text-align: left; }
+  .empty-row td { text-align: center; color: var(--text-muted); font-family: inherit; padding: 16px 8px; }
+
+  .chg-up { color: var(--status-good); }
+  .chg-down { color: var(--status-critical); }
+  .chg-flat { color: var(--text-secondary); }
+
+  .row-actions { display: inline-flex; gap: 4px; margin-left: 6px; }
+  .row-actions button {
+    border: none; background: transparent; cursor: pointer; font-size: 12px; padding: 2px; line-height: 1;
+    color: var(--text-muted);
+  }
+  .cat-badge {
+    font-size: 8.5px; font-weight: 700; padding: 1px 5px; border-radius: 999px; margin-left: 5px;
+    background: var(--surface-2); color: var(--text-secondary); vertical-align: 1px;
+  }
+
+  .footnote { font-size: 10px; color: var(--text-muted); text-align: center; padding: 6px 10px 0; line-height: 1.5; }
+
+  /* ---- Modals (bottom sheet on mobile) ---- */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-sheet {
+    background: var(--surface-1); width: 100%; max-width: 480px; border-radius: 16px 16px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); max-height: 88vh; overflow-y: auto;
+  }
+  .modal-sheet h3 { margin: 0 0 4px; font-size: 15px; }
+  .modal-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11.5px; font-weight: 600; margin-bottom: 5px; color: var(--text-secondary); }
+  .field .req { color: var(--status-critical); }
+  .field input, .field select {
+    width: 100%; font-size: 15px; padding: 9px 10px; border-radius: 9px; border: 1px solid var(--border);
+    background: var(--page-plane); color: var(--text-primary); font-family: inherit;
+  }
+  .field-row { display: flex; gap: 8px; }
+  .field-row input { flex: 1; }
+  .field-note { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; }
+  .modal-status { min-height: 16px; font-size: 12px; margin: 6px 0; }
+  .modal-status.ok { color: var(--status-good); }
+  .modal-status.err { color: var(--status-critical); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-cancel, .btn-save {
+    flex: 1; padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+  }
+  .btn-cancel { background: var(--surface-2); color: var(--text-secondary); }
+  .btn-save { background: var(--accent); color: #fff; }
+  .btn-save:disabled, .btn-cancel:disabled { opacity: 0.6; }
+
+  .lots-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+  .lots-table th { text-align: right; font-size: 9.5px; text-transform: uppercase; color: var(--text-muted); padding: 4px 4px; }
+  .lots-table th:first-child { text-align: left; }
+  .lots-table td { padding: 4px; border-top: 1px solid var(--border); text-align: right; }
+  .lots-table td:first-child { text-align: left; }
+  .lots-table input { width: 100%; font-size: 13px; padding: 6px; border-radius: 7px; border: 1px solid var(--border); background: var(--page-plane); color: var(--text-primary); }
+  .lots-empty { text-align: center; color: var(--text-muted); padding: 12px 4px; }
+  .lot-del-btn { background: none; border: none; color: var(--status-critical); font-size: 13px; cursor: pointer; padding: 2px; }
+</style>
+</head>
+<body class="edit-mode-off">
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <h1>Portfolio</h1>
+      <div class="sub">Stocks + ETFs · mobile view</div>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="icon-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme">◐</button>
+      <button type="button" class="icon-btn" onclick="syncAll()" title="Refresh">↻</button>
+    </div>
+  </div>
+  <div class="status-line"><span class="status-dot" id="statusDot"></span><span id="statusText">Loading…</span></div>
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="summary-row">
+    <div class="stat-tile">
+      <div class="label">Total Value</div>
+      <div class="value" id="sumValue">—</div>
+      <div class="sub" id="sumInvested" style="color:var(--text-muted)">—</div>
+    </div>
+    <div class="stat-tile">
+      <div class="label">Overall Gain</div>
+      <div class="value" id="sumGain">—</div>
+      <div class="sub" id="sumGainPct">—</div>
+    </div>
+    <div class="stat-tile">
+      <div class="label">Today</div>
+      <div class="value" id="sumToday">—</div>
+      <div class="sub" id="sumTodayPct">—</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Stock Portfolio</h2>
+        <div class="meta" id="stocksMeta">—</div>
+      </div>
+      <button type="button" class="add-btn write-only" onclick="openAddStockModal()">+ Add</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Stock</th><th>Qty</th><th>LTP</th><th>Invested</th><th>Value</th><th>Gain</th><th>Gain %</th></tr></thead>
+        <tbody id="stocksBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+        <tfoot><tr id="stocksTotalRow" style="display:none">
+          <td>Total</td><td></td><td></td><td id="stocksTotInv"></td><td id="stocksTotVal"></td><td id="stocksTotGain"></td><td id="stocksTotGainPct"></td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>ETF Portfolio</h2>
+        <div class="meta" id="etfMeta">—</div>
+      </div>
+      <button type="button" class="add-btn write-only" onclick="openAddEtfModal()">+ Add</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>ETF</th><th>Qty</th><th>LTP</th><th>Invested</th><th>Value</th><th>Gain</th><th>Gain %</th></tr></thead>
+        <tbody id="etfBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+        <tfoot><tr id="etfTotalRow" style="display:none">
+          <td>Total</td><td></td><td></td><td id="etfTotInv"></td><td id="etfTotVal"></td><td id="etfTotGain"></td><td id="etfTotGainPct"></td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Realized Gains</h2>
+        <div class="meta" id="soldMeta">Sold Stocks &amp; ETFs</div>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Stock</th><th>Sell Date</th><th>Qty</th><th>Gain</th><th>Gain %</th></tr></thead>
+        <tbody id="soldBody"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+        <tfoot><tr id="soldTotalRow" style="display:none">
+          <td colspan="3">Total</td><td id="soldTotGain"></td><td id="soldTotGainPct"></td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="footnote">Reads/writes the same "Portfolio-Stocks and ETF" sheet as the full dashboard — changes made here show up there too, and vice versa. Auto-refreshes every 3 minutes while this page is open.</div>
+</div>
+
+<!-- ---- Add / Edit Stock (shared modal) ---- -->
+<div class="modal-overlay" id="stockModalOverlay" onclick="if(event.target===this) closeStockFormModal()">
+  <div class="modal-sheet">
+    <h3 id="stockModalTitle">Add Stock</h3>
+    <div class="modal-sub" id="stockModalSub">Inserted into the "Portfolio" tab.</div>
+    <div class="field"><label for="stockFormSymbol">Symbol <span class="req">*</span></label>
+      <input type="text" id="stockFormSymbol" placeholder="e.g. DMART" maxlength="20" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="field"><label for="stockFormBuyDate">Buy Date <span class="req">*</span></label>
+      <input type="date" id="stockFormBuyDate"></div>
+    <div class="field"><label for="stockFormQty">Quantity <span class="req">*</span></label>
+      <input type="number" id="stockFormQty" min="0" step="any" placeholder="e.g. 10"></div>
+    <div class="field"><label for="stockFormBuyPrice">Buy Price <span class="req">*</span></label>
+      <input type="number" id="stockFormBuyPrice" min="0" step="0.01" placeholder="e.g. 1250.50"></div>
+    <div class="field"><label for="stockFormSL">SL (Stop Loss) — optional</label>
+      <input type="number" id="stockFormSL" min="0" step="0.01" placeholder="e.g. 1180.00"></div>
+    <div class="field"><label for="stockFormMarketCap">Market Cap <span class="req">*</span></label>
+      <select id="stockFormMarketCap"><option value="">Select…</option><option value="Large Cap">Large Cap</option><option value="Mid Cap">Mid Cap</option><option value="Small Cap">Small Cap</option></select></div>
+    <div class="field"><label for="stockFormSector">Sector — optional</label>
+      <input type="text" id="stockFormSector" placeholder="e.g. Auto Ancillary" maxlength="60"></div>
+    <div class="field-note" id="stockFormEditNote" style="display:none;margin:-6px 0 12px">🔒 Only Quantity, Buy Price and SL can be changed here.</div>
+    <div class="modal-status" id="stockModalStatus"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeStockFormModal()">Cancel</button>
+      <button type="button" class="btn-save" id="stockFormSaveBtn" onclick="submitStockForm()">Add Stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---- Sell Stock ---- -->
+<div class="modal-overlay" id="sellModalOverlay" onclick="if(event.target===this) closeSellModal()">
+  <div class="modal-sheet">
+    <h3 id="sellModalTitle">Log Sale</h3>
+    <div class="modal-sub">Appends to "Sold Stocks" and reduces/removes this holding.</div>
+    <div class="field"><label>Symbol</label><input type="text" id="sellFormSymbol" disabled></div>
+    <div class="field"><label for="sellFormSellDate">Sell Date <span class="req">*</span></label><input type="date" id="sellFormSellDate"></div>
+    <div class="field"><label for="sellFormQty">Quantity <span class="req">*</span></label>
+      <input type="number" id="sellFormQty" min="0" step="any">
+      <div class="field-note" id="sellFormQtyNote"></div></div>
+    <div class="field"><label for="sellFormSellPrice">Sell Price <span class="req">*</span></label><input type="number" id="sellFormSellPrice" min="0" step="0.01"></div>
+    <div class="field"><label for="sellFormReason">Reason — optional</label><input type="text" id="sellFormReason" maxlength="240"></div>
+    <div class="modal-status" id="sellModalStatus"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeSellModal()">Cancel</button>
+      <button type="button" class="btn-save" id="sellFormSaveBtn" onclick="submitSellForm()">Log Sale</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---- Add ETF ---- -->
+<div class="modal-overlay" id="etfAddModalOverlay" onclick="if(event.target===this) closeAddEtfModal()">
+  <div class="modal-sheet">
+    <h3>Add ETF</h3>
+    <div class="modal-sub">Inserted as a new purchase lot into the "ETF" tab.</div>
+    <div class="field"><label for="etfAddSymbol">Symbol <span class="req">*</span></label>
+      <input type="text" id="etfAddSymbol" placeholder="e.g. NIFTYBEES" maxlength="20" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="field"><label for="etfAddBuyDate">Buy Date <span class="req">*</span></label><input type="date" id="etfAddBuyDate"></div>
+    <div class="field"><label for="etfAddQty">Quantity <span class="req">*</span></label><input type="number" id="etfAddQty" min="0" step="any"></div>
+    <div class="field"><label for="etfAddBuyPrice">Buy Price <span class="req">*</span></label><input type="number" id="etfAddBuyPrice" min="0" step="0.01"></div>
+    <div class="modal-status" id="etfAddModalStatus"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeAddEtfModal()">Cancel</button>
+      <button type="button" class="btn-save" id="etfAddSaveBtn" onclick="submitAddEtfForm()">Add ETF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---- Edit ETF Lots ---- -->
+<div class="modal-overlay" id="etfEditModalOverlay" onclick="if(event.target===this) closeEditEtfModal()">
+  <div class="modal-sheet">
+    <h3 id="etfEditModalTitle">Edit Lots</h3>
+    <div class="modal-sub">Every purchase lot for this symbol — 🗑 deletes immediately, other edits save on "Save Changes".</div>
+    <table class="lots-table">
+      <thead><tr><th>Buy Date</th><th>Qty</th><th>Buy Price</th><th></th></tr></thead>
+      <tbody id="etfEditLotsBody"><tr><td colspan="4" class="lots-empty">Loading…</td></tr></tbody>
+    </table>
+    <div class="modal-status" id="etfEditModalStatus"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeEditEtfModal()">Cancel</button>
+      <button type="button" class="btn-save" id="etfEditSaveBtn" onclick="submitEditEtfLots()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---- Sell ETF Lots ---- -->
+<div class="modal-overlay" id="etfSellModalOverlay" onclick="if(event.target===this) closeSellEtfModal()">
+  <div class="modal-sheet">
+    <h3 id="etfSellModalTitle">Log Sale</h3>
+    <div class="modal-sub">Enter a Sell Qty for each lot you're selling from.</div>
+    <table class="lots-table">
+      <thead><tr><th>Buy Date</th><th>Held</th><th>Buy Price</th><th>Sell Qty</th></tr></thead>
+      <tbody id="etfSellLotsBody"><tr><td colspan="4" class="lots-empty">Loading…</td></tr></tbody>
+    </table>
+    <div class="field"><label for="etfSellSellDate">Sell Date <span class="req">*</span></label><input type="date" id="etfSellSellDate"></div>
+    <div class="field"><label for="etfSellSellPrice">Sell Price <span class="req">*</span></label><input type="number" id="etfSellSellPrice" min="0" step="0.01"></div>
+    <div class="field"><label for="etfSellReason">Reason — optional</label><input type="text" id="etfSellReason" maxlength="240"></div>
+    <div class="modal-status" id="etfSellModalStatus"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeSellEtfModal()">Cancel</button>
+      <button type="button" class="btn-save" id="etfSellSaveBtn" onclick="submitSellEtfForm()">Log Sale</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- Same backend/data source as the full dashboard (index.html) — read/write actions here show up
+  // there too, and vice versa. Kept intentionally in sync with these exact constants/action names. ----
+  const SHEET_ID = '19JTwr2EmfZO-ng3x-ydM7gpn5SSAyBaJ3iQIp4KEBaw';
+  const STOCKS_SHEET_NAME = 'Portfolio';
+  const ETF_SHEET_NAME = 'ETF Summary';
+  const SOLD_STOCKS_SHEET_NAME = 'Sold Stocks';
+  const SETTINGS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwQN-vEwFZO-Wt5XLwstJkp2tQ6zuF9IZAjn0xtXvuEqajSYpS2luqDyJUV_H97XCqHlg/exec';
+  const SETTINGS_TOKEN = 'CUy6OXWHBeaInxHcWjYjQD8aJ_kiyRxS';
+  const LTCG_DAYS = 365;
+
+  let lastStocks = [], lastEtfs = [], lastSold = [];
+
+  // ---- Theme ----
+  const THEME_KEY = 'portfolioMobileTheme';
+  function currentThemeMode() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+  function applyTheme(mode) {
+    mode = mode === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', mode);
+    try { localStorage.setItem(THEME_KEY, mode); } catch (e) {}
+  }
+  function toggleTheme() { applyTheme(currentThemeMode() === 'dark' ? 'light' : 'dark'); }
+  (function initTheme() {
+    try {
+      const stored = localStorage.getItem(THEME_KEY);
+      if (stored) { applyTheme(stored); return; }
+    } catch (e) {}
+    applyTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  })();
+
+  // ---- JSONP loader (bypasses CORS entirely — a script tag, not fetch/XHR; works from any origin) ----
+  let jsonpSeq = 0;
+  function jsonpFetch(url) {
+    return new Promise((resolve, reject) => {
+      const cbName = `__gvizCB_${Date.now()}_${jsonpSeq++}`;
+      const script = document.createElement('script');
+      let done = false;
+      const cleanup = () => { delete window[cbName]; script.remove(); clearTimeout(timer); };
+      const timer = setTimeout(() => { if (!done) { done = true; cleanup(); reject(new Error('timed out waiting for Google to respond')); } }, 15000);
+      window[cbName] = (resp) => { if (!done) { done = true; cleanup(); resolve(resp); } };
+      script.onerror = () => { if (!done) { done = true; cleanup(); reject(new Error('script load failed')); } };
+      script.src = url.replace('__CALLBACK__', cbName);
+      document.head.appendChild(script);
+    });
+  }
+  function gvizUrl(sheetName) {
+    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:__CALLBACK__&sheet=${encodeURIComponent(sheetName)}&_=${Date.now()}`;
+  }
+  function gvizToObjects(resp) {
+    if (!resp || resp.status === 'error') {
+      const msg = (resp && resp.errors && resp.errors[0] && resp.errors[0].detailed_message) || 'unknown gviz error';
+      throw new Error(msg);
+    }
+    const table = resp.table;
+    const headers = table.cols.map(c => (c.label || '').trim());
+    return table.rows.map(r => {
+      const o = {};
+      headers.forEach((h, i) => {
+        if (!h) return;
+        const cell = r.c[i];
+        o[h] = cell ? (cell.v !== null && cell.v !== undefined ? cell.v : '') : '';
+      });
+      return o;
+    });
+  }
+  async function fetchSheet(sheetName) { return gvizToObjects(await jsonpFetch(gvizUrl(sheetName))); }
+
+  function pick(obj, ...names) {
+    for (const n of names) {
+      for (const k of Object.keys(obj)) {
+        if (k.toLowerCase().replace(/\s+/g, ' ').trim() === n.toLowerCase()) return obj[k];
+      }
+    }
+    return undefined;
+  }
+  function num(v) {
+    if (v === undefined || v === null || v === '') return NaN;
+    if (typeof v === 'number') return v;
+    return parseFloat(String(v).replace(/,/g, ''));
+  }
+  function fmtMoney(n) { return isFinite(n) ? '₹' + Math.round(n).toLocaleString('en-IN') : '—'; }
+  function fmtNum(n, d = 2) { return isFinite(n) ? n.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—'; }
+  function fmtPct(n, d = 2) { return isFinite(n) ? (n >= 0 ? '+' : '') + n.toFixed(d) + '%' : '—'; }
+  function chgClass(n) { return !isFinite(n) || n === 0 ? 'chg-flat' : (n > 0 ? 'chg-up' : 'chg-down'); }
+  function escapeHtmlText(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function extractHoldings(objs, qtyKeys) {
+    return objs.map(o => ({ raw: o, symbol: pick(o, 'Stock', 'ETF', 'Symbol'), qty: num(pick(o, ...qtyKeys)) }))
+      .filter(x => x.symbol && x.symbol.length && isFinite(x.qty) && x.qty > 0);
+  }
+  function parseGvizDate(v) {
+    if (v instanceof Date) return v;
+    if (typeof v === 'string') {
+      const gvizM = v.match(/^Date\((\d+),(\d+),(\d+)/);
+      if (gvizM) return new Date(+gvizM[1], +gvizM[2], +gvizM[3]);
+      const isoM = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (isoM) return new Date(+isoM[1], +isoM[2] - 1, +isoM[3]);
+      const usM = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (usM) return new Date(+usM[3], +usM[1] - 1, +usM[2]);
+      const parsed = new Date(v);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return null;
+  }
+  function fmtDateShort(d) { return d ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'; }
+  function sumBy(arr, key) { return arr.reduce((s, x) => s + (isFinite(x[key]) ? x[key] : 0), 0); }
+  function todayIsoDate() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }
+
+  function setStatus(mode, text) {
+    document.getElementById('statusDot').className = 'status-dot ' + mode;
+    document.getElementById('statusText').textContent = text;
+  }
+  function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    el.style.display = 'block';
+    el.textContent = '⚠ Couldn’t sync: ' + msg;
+  }
+  function clearError() { document.getElementById('errorBanner').style.display = 'none'; }
+
+  // ---- Render: Stocks ----
+  function renderStocks(stocks) {
+    const body = document.getElementById('stocksBody');
+    if (!stocks.length) { body.innerHTML = '<tr class="empty-row"><td colspan="7">No holdings.</td></tr>'; document.getElementById('stocksTotalRow').style.display = 'none'; document.getElementById('stocksMeta').textContent = '0 holdings'; return; }
+    const sorted = [...stocks].sort((a, b) => a.symbol.localeCompare(b.symbol));
+    body.innerHTML = sorted.map(s => `<tr>
+      <td>${escapeHtmlText(s.symbol)}<span class="row-actions write-only">
+        <button type="button" onclick="openEditStockModal('${s.symbol.replace(/'/g, "\\'")}')" title="Edit">✎</button>
+        <button type="button" onclick="openSellStockModal('${s.symbol.replace(/'/g, "\\'")}')" title="Sell">💰</button>
+      </span></td>
+      <td>${fmtNum(s.qty, 0)}</td>
+      <td>${fmtNum(s.ltp)}</td>
+      <td>${fmtMoney(s.invested)}</td>
+      <td>${fmtMoney(s.value)}</td>
+      <td class="${chgClass(s.gain)}">${(s.gain >= 0 ? '+' : '') + fmtMoney(s.gain)}</td>
+      <td class="${chgClass(s.gainPct)}">${fmtPct(s.gainPct)}</td>
+    </tr>`).join('');
+    const inv = sumBy(stocks, 'invested'), val = sumBy(stocks, 'value'), gain = val - inv, gainPct = inv ? (gain / inv) * 100 : 0;
+    document.getElementById('stocksTotInv').textContent = fmtMoney(inv);
+    document.getElementById('stocksTotVal').textContent = fmtMoney(val);
+    const gEl = document.getElementById('stocksTotGain'); gEl.textContent = (gain >= 0 ? '+' : '') + fmtMoney(gain); gEl.className = chgClass(gain);
+    const gpEl = document.getElementById('stocksTotGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = chgClass(gainPct);
+    document.getElementById('stocksTotalRow').style.display = '';
+    document.getElementById('stocksMeta').textContent = `${stocks.length} holding${stocks.length === 1 ? '' : 's'} · ${fmtMoney(val)}`;
+  }
+
+  // ---- Render: ETFs ----
+  function renderEtfs(etfs) {
+    const body = document.getElementById('etfBody');
+    if (!etfs.length) { body.innerHTML = '<tr class="empty-row"><td colspan="7">No holdings.</td></tr>'; document.getElementById('etfTotalRow').style.display = 'none'; document.getElementById('etfMeta').textContent = '0 holdings'; return; }
+    const sorted = [...etfs].sort((a, b) => a.symbol.localeCompare(b.symbol));
+    body.innerHTML = sorted.map(e => `<tr>
+      <td>${escapeHtmlText(e.symbol)}<span class="row-actions write-only">
+        <button type="button" onclick="openEditEtfModal('${e.symbol.replace(/'/g, "\\'")}')" title="Edit lots">✎</button>
+        <button type="button" onclick="openSellEtfModal('${e.symbol.replace(/'/g, "\\'")}')" title="Sell">💰</button>
+      </span></td>
+      <td>${fmtNum(e.qty, 0)}</td>
+      <td>${fmtNum(e.ltp)}</td>
+      <td>${fmtMoney(e.invested)}</td>
+      <td>${fmtMoney(e.value)}</td>
+      <td class="${chgClass(e.gain)}">${(e.gain >= 0 ? '+' : '') + fmtMoney(e.gain)}</td>
+      <td class="${chgClass(e.gainPct)}">${fmtPct(e.gainPct)}</td>
+    </tr>`).join('');
+    const inv = sumBy(etfs, 'invested'), val = sumBy(etfs, 'value'), gain = val - inv, gainPct = inv ? (gain / inv) * 100 : 0;
+    document.getElementById('etfTotInv').textContent = fmtMoney(inv);
+    document.getElementById('etfTotVal').textContent = fmtMoney(val);
+    const gEl = document.getElementById('etfTotGain'); gEl.textContent = (gain >= 0 ? '+' : '') + fmtMoney(gain); gEl.className = chgClass(gain);
+    const gpEl = document.getElementById('etfTotGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = chgClass(gainPct);
+    document.getElementById('etfTotalRow').style.display = '';
+    document.getElementById('etfMeta').textContent = `${etfs.length} holding${etfs.length === 1 ? '' : 's'} · ${fmtMoney(val)}`;
+  }
+
+  // ---- Render: top summary tiles (Stocks + ETFs combined) ----
+  function renderSummary(stocks, etfs) {
+    const all = [...stocks, ...etfs];
+    const inv = sumBy(all, 'invested'), val = sumBy(all, 'value'), gain = val - inv, gainPct = inv ? (gain / inv) * 100 : 0;
+    const dayGain = sumBy(all, 'dayGain'); const prevVal = val - dayGain; const dayPct = prevVal ? (dayGain / prevVal) * 100 : 0;
+    document.getElementById('sumValue').textContent = fmtMoney(val);
+    document.getElementById('sumInvested').textContent = 'Inv. ' + fmtMoney(inv);
+    const gEl = document.getElementById('sumGain'); gEl.textContent = (gain >= 0 ? '+' : '') + fmtMoney(gain); gEl.className = 'value ' + chgClass(gain);
+    const gpEl = document.getElementById('sumGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = 'sub ' + chgClass(gainPct);
+    const tEl = document.getElementById('sumToday'); tEl.textContent = (dayGain >= 0 ? '+' : '') + fmtMoney(dayGain); tEl.className = 'value ' + chgClass(dayGain);
+    const tpEl = document.getElementById('sumTodayPct'); tpEl.textContent = fmtPct(dayPct); tpEl.className = 'sub ' + chgClass(dayPct);
+  }
+
+  // ---- Render: Realized Gains (Sold Stocks tab — Stocks + ETFs, most recent first) ----
+  function renderSold(rows) {
+    const body = document.getElementById('soldBody');
+    if (!rows.length) { body.innerHTML = '<tr class="empty-row"><td colspan="5">No closed positions yet.</td></tr>'; document.getElementById('soldTotalRow').style.display = 'none'; return; }
+    const sorted = [...rows].sort((a, b) => (b.sellDate ? b.sellDate.getTime() : 0) - (a.sellDate ? a.sellDate.getTime() : 0));
+    body.innerHTML = sorted.map(r => `<tr>
+      <td>${escapeHtmlText(r.symbol)}${r.category ? `<span class="cat-badge">${escapeHtmlText(r.category)}</span>` : ''}</td>
+      <td>${r.sellDate ? fmtDateShort(r.sellDate) : '—'}</td>
+      <td>${fmtNum(r.qty, 0)}</td>
+      <td class="${chgClass(r.gain)}">${(r.gain >= 0 ? '+' : '') + fmtMoney(r.gain)}</td>
+      <td class="${chgClass(r.gainPct)}">${fmtPct(r.gainPct)}</td>
+    </tr>`).join('');
+    const gain = sumBy(rows, 'gain'); const inv = sumBy(rows, 'invested'); const gainPct = inv ? (gain / inv) * 100 : 0;
+    const gEl = document.getElementById('soldTotGain'); gEl.textContent = (gain >= 0 ? '+' : '') + fmtMoney(gain); gEl.className = chgClass(gain);
+    const gpEl = document.getElementById('soldTotGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = chgClass(gainPct);
+    document.getElementById('soldTotalRow').style.display = '';
+  }
+
+  // ---- Main sync ----
+  async function syncAll() {
+    setStatus('syncing', 'Syncing…');
+    try {
+      const [stockRows, etfRows] = await Promise.all([fetchSheet(STOCKS_SHEET_NAME), fetchSheet(ETF_SHEET_NAME)]);
+      const stocks = extractHoldings(stockRows, ['Quantity']).map(x => {
+        const o = x.raw;
+        return {
+          symbol: x.symbol, qty: x.qty,
+          ltp: num(pick(o, 'Last Price')),
+          invested: num(pick(o, 'Invest Amt', 'Inv. Amt')),
+          value: num(pick(o, 'Latest Value', 'Latest')),
+          gain: num(pick(o, 'Overall Gain')),
+          gainPct: num(pick(o, 'Overall %', 'Overall Gain %')) * 100,
+          dayGain: num(pick(o, 'Day Gain')),
+        };
+      });
+      const etfs = extractHoldings(etfRows, ['Quantity']).map(x => {
+        const o = x.raw;
+        return {
+          symbol: x.symbol, qty: x.qty,
+          ltp: num(pick(o, 'Last Price')),
+          invested: num(pick(o, 'Inv. Amt', 'Invest Amt')),
+          value: num(pick(o, 'Latest', 'Latest Value')),
+          gain: num(pick(o, 'Overall Gain')),
+          gainPct: num(pick(o, 'Overall Gain %', 'Overall %')) * 100,
+          dayGain: num(pick(o, 'Day Gain')),
+        };
+      });
+      if (!stocks.length && !etfs.length) throw new Error('sheet returned no readable holding rows');
+      lastStocks = stocks; lastEtfs = etfs;
+      renderStocks(stocks); renderEtfs(etfs); renderSummary(stocks, etfs);
+      clearError();
+      setStatus('ok', 'Synced ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+      syncSold(); syncEditMode();
+    } catch (err) {
+      setStatus('err', 'Sync failed');
+      showError(err.message || String(err));
+    }
+  }
+
+  async function syncSold() {
+    try {
+      const rows = await fetchSheet(SOLD_STOCKS_SHEET_NAME);
+      lastSold = rows.map(o => {
+        const qty = num(pick(o, 'Quantity'));
+        const buyPrice = num(pick(o, 'Buy Price'));
+        const sellPrice = num(pick(o, 'Sell Price'));
+        const investedRaw = num(pick(o, 'Invested Amt'));
+        const saleValueRaw = num(pick(o, 'Sale Value'));
+        const invested = isFinite(investedRaw) ? investedRaw : qty * buyPrice;
+        const saleValue = isFinite(saleValueRaw) ? saleValueRaw : qty * sellPrice;
+        const gainRaw = num(pick(o, 'Realized Gain'));
+        const gain = isFinite(gainRaw) ? gainRaw : (saleValue - invested);
+        const gainPctRaw = num(pick(o, 'Realized Gain %'));
+        const gainPct = isFinite(gainPctRaw) ? gainPctRaw * 100 : (invested ? (gain / invested) * 100 : NaN);
+        return {
+          symbol: pick(o, 'Stock', 'Symbol'),
+          sellDate: parseGvizDate(pick(o, 'Sell Date')),
+          qty, invested, gain, gainPct,
+          category: (pick(o, 'Category') || '').toString().trim(),
+        };
+      }).filter(r => r.symbol);
+      renderSold(lastSold);
+    } catch (err) {
+      // Optional — Realized Gains section just stays empty if this tab isn't reachable.
+      renderSold([]);
+    }
+  }
+
+  // ---- Edit-mode gate: matches the full dashboard's fail-safe pattern — write controls (+Add, ✎, 💰)
+  // stay hidden until this confirms EditMode is actually on for this sheet. ----
+  async function syncEditMode() {
+    try {
+      const resp = await fetch(SETTINGS_WEBAPP_URL + '?action=read');
+      const data = await resp.json();
+      document.body.classList.toggle('edit-mode-off', !(data && data.editMode === 1));
+    } catch (err) { /* stays edit-mode-off — fail-safe default */ }
+  }
+
+  async function postAction(payload) {
+    const resp = await fetch(SETTINGS_WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ token: SETTINGS_TOKEN }, payload)),
+    });
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'Save failed');
+    return data;
+  }
+
+  // ==== Add / Edit Stock ====
+  let stockFormMode = 'add', stockFormEditSymbol = null;
+  function setStockModalStatus(t, c) { const el = document.getElementById('stockModalStatus'); el.textContent = t || ''; el.className = 'modal-status' + (c ? ' ' + c : ''); }
+  function openAddStockModal() {
+    stockFormMode = 'add'; stockFormEditSymbol = null;
+    document.getElementById('stockModalTitle').textContent = 'Add Stock';
+    document.getElementById('stockModalSub').textContent = 'Inserted into the "Portfolio" tab.';
+    document.getElementById('stockFormSymbol').value = ''; document.getElementById('stockFormSymbol').disabled = false;
+    document.getElementById('stockFormBuyDate').value = todayIsoDate(); document.getElementById('stockFormBuyDate').disabled = false;
+    document.getElementById('stockFormQty').value = ''; document.getElementById('stockFormBuyPrice').value = '';
+    document.getElementById('stockFormSL').value = ''; document.getElementById('stockFormSL').disabled = false;
+    document.getElementById('stockFormMarketCap').value = ''; document.getElementById('stockFormMarketCap').disabled = false;
+    document.getElementById('stockFormSector').value = ''; document.getElementById('stockFormSector').disabled = false;
+    document.getElementById('stockFormEditNote').style.display = 'none';
+    document.getElementById('stockFormSaveBtn').textContent = 'Add Stock';
+    setStockModalStatus('');
+    document.getElementById('stockModalOverlay').classList.add('show');
+  }
+  function openEditStockModal(symbol) {
+    const s = lastStocks.find(x => x.symbol === symbol);
+    if (!s) return;
+    stockFormMode = 'edit'; stockFormEditSymbol = symbol;
+    document.getElementById('stockModalTitle').textContent = 'Edit ' + symbol;
+    document.getElementById('stockModalSub').textContent = 'Only Quantity, Buy Price and SL can be updated here.';
+    document.getElementById('stockFormSymbol').value = symbol; document.getElementById('stockFormSymbol').disabled = true;
+    document.getElementById('stockFormBuyDate').value = ''; document.getElementById('stockFormBuyDate').disabled = true;
+    document.getElementById('stockFormQty').value = isFinite(s.qty) ? s.qty : '';
+    document.getElementById('stockFormBuyPrice').value = '';
+    document.getElementById('stockFormSL').value = ''; document.getElementById('stockFormSL').disabled = false;
+    document.getElementById('stockFormMarketCap').disabled = true;
+    document.getElementById('stockFormSector').disabled = true;
+    document.getElementById('stockFormEditNote').style.display = 'block';
+    document.getElementById('stockFormSaveBtn').textContent = 'Save Changes';
+    setStockModalStatus('');
+    document.getElementById('stockModalOverlay').classList.add('show');
+  }
+  function closeStockFormModal() { document.getElementById('stockModalOverlay').classList.remove('show'); }
+  async function submitStockForm() {
+    const saveBtn = document.getElementById('stockFormSaveBtn');
+    const qty = Number(document.getElementById('stockFormQty').value);
+    const buyPrice = Number(document.getElementById('stockFormBuyPrice').value);
+    const slRaw = document.getElementById('stockFormSL').value.trim();
+    const sl = slRaw === '' ? '' : Number(slRaw);
+    if (!isFinite(qty) || qty <= 0) { setStockModalStatus('Enter a valid Quantity.', 'err'); return; }
+    if (!isFinite(buyPrice) || buyPrice <= 0) { setStockModalStatus('Enter a valid Buy Price.', 'err'); return; }
+    if (slRaw !== '' && (!isFinite(sl) || sl <= 0)) { setStockModalStatus('SL must be positive, or blank.', 'err'); return; }
+    let payload;
+    if (stockFormMode === 'add') {
+      const symbol = document.getElementById('stockFormSymbol').value.trim().toUpperCase();
+      const buyDate = document.getElementById('stockFormBuyDate').value;
+      const marketCap = document.getElementById('stockFormMarketCap').value;
+      const sector = document.getElementById('stockFormSector').value.trim();
+      if (!symbol) { setStockModalStatus('Symbol is required.', 'err'); return; }
+      if (!buyDate) { setStockModalStatus('Buy Date is required.', 'err'); return; }
+      if (!marketCap) { setStockModalStatus('Select a Market Cap.', 'err'); return; }
+      payload = { action: 'addStock', symbol, buyDate, qty, buyPrice, sl, marketCap, sector };
+    } else {
+      payload = { action: 'modifyStock', symbol: stockFormEditSymbol, qty, buyPrice, sl };
+    }
+    saveBtn.disabled = true;
+    setStockModalStatus(stockFormMode === 'add' ? 'Adding…' : 'Saving…');
+    try {
+      await postAction(payload);
+      setStockModalStatus('Saved ✓ Refreshing…', 'ok');
+      await syncAll();
+      closeStockFormModal();
+    } catch (err) { setStockModalStatus(err.message || 'Save failed — try again.', 'err'); }
+    finally { saveBtn.disabled = false; }
+  }
+
+  // ==== Sell Stock ====
+  let sellFormHeldQty = NaN;
+  function setSellModalStatus(t, c) { const el = document.getElementById('sellModalStatus'); el.textContent = t || ''; el.className = 'modal-status' + (c ? ' ' + c : ''); }
+  function openSellStockModal(symbol) {
+    const s = lastStocks.find(x => x.symbol === symbol);
+    if (!s) return;
+    sellFormHeldQty = isFinite(s.qty) ? s.qty : NaN;
+    document.getElementById('sellModalTitle').textContent = 'Log Sale — ' + symbol;
+    document.getElementById('sellFormSymbol').value = symbol;
+    document.getElementById('sellFormSellDate').value = todayIsoDate();
+    document.getElementById('sellFormQty').value = sellFormHeldQty;
+    document.getElementById('sellFormQty').max = isFinite(sellFormHeldQty) ? sellFormHeldQty : '';
+    document.getElementById('sellFormQtyNote').textContent = isFinite(sellFormHeldQty) ? `You hold ${fmtNum(sellFormHeldQty, 0)}.` : '';
+    document.getElementById('sellFormSellPrice').value = ''; document.getElementById('sellFormReason').value = '';
+    setSellModalStatus('');
+    document.getElementById('sellModalOverlay').classList.add('show');
+  }
+  function closeSellModal() { document.getElementById('sellModalOverlay').classList.remove('show'); }
+  async function submitSellForm() {
+    const saveBtn = document.getElementById('sellFormSaveBtn');
+    const symbol = document.getElementById('sellFormSymbol').value.trim().toUpperCase();
+    const sellDate = document.getElementById('sellFormSellDate').value;
+    const qty = Number(document.getElementById('sellFormQty').value);
+    const sellPrice = Number(document.getElementById('sellFormSellPrice').value);
+    const reason = document.getElementById('sellFormReason').value.trim();
+    if (!sellDate) { setSellModalStatus('Sell Date is required.', 'err'); return; }
+    if (!isFinite(qty) || qty <= 0) { setSellModalStatus('Enter a valid Quantity.', 'err'); return; }
+    if (isFinite(sellFormHeldQty) && qty > sellFormHeldQty) { setSellModalStatus(`You only hold ${fmtNum(sellFormHeldQty, 0)}.`, 'err'); return; }
+    if (!isFinite(sellPrice) || sellPrice <= 0) { setSellModalStatus('Enter a valid Sell Price.', 'err'); return; }
+    saveBtn.disabled = true;
+    setSellModalStatus('Logging sale…');
+    try {
+      await postAction({ action: 'sellStock', symbol, sellDate, qty, sellPrice, reason });
+      setSellModalStatus('Logged ✓ Refreshing…', 'ok');
+      await syncAll();
+      closeSellModal();
+    } catch (err) { setSellModalStatus(err.message || 'Save failed — try again.', 'err'); }
+    finally { saveBtn.disabled = false; }
+  }
+
+  // ==== Add ETF ====
+  function setEtfAddModalStatus(t, c) { const el = document.getElementById('etfAddModalStatus'); el.textContent = t || ''; el.className = 'modal-status' + (c ? ' ' + c : ''); }
+  function openAddEtfModal() {
+    document.getElementById('etfAddSymbol').value = '';
+    document.getElementById('etfAddBuyDate').value = todayIsoDate();
+    document.getElementById('etfAddQty').value = ''; document.getElementById('etfAddBuyPrice').value = '';
+    setEtfAddModalStatus('');
+    document.getElementById('etfAddModalOverlay').classList.add('show');
+  }
+  function closeAddEtfModal() { document.getElementById('etfAddModalOverlay').classList.remove('show'); }
+  async function submitAddEtfForm() {
+    const saveBtn = document.getElementById('etfAddSaveBtn');
+    const symbol = document.getElementById('etfAddSymbol').value.trim().toUpperCase();
+    const buyDate = document.getElementById('etfAddBuyDate').value;
+    const qty = Number(document.getElementById('etfAddQty').value);
+    const buyPrice = Number(document.getElementById('etfAddBuyPrice').value);
+    if (!symbol) { setEtfAddModalStatus('Symbol is required.', 'err'); return; }
+    if (!buyDate) { setEtfAddModalStatus('Buy Date is required.', 'err'); return; }
+    if (!isFinite(qty) || qty <= 0) { setEtfAddModalStatus('Enter a valid Quantity.', 'err'); return; }
+    if (!isFinite(buyPrice) || buyPrice <= 0) { setEtfAddModalStatus('Enter a valid Buy Price.', 'err'); return; }
+    saveBtn.disabled = true;
+    setEtfAddModalStatus('Adding…');
+    try {
+      await postAction({ action: 'addEtf', symbol, buyDate, qty, buyPrice });
+      setEtfAddModalStatus('Added ✓ Refreshing…', 'ok');
+      await syncAll();
+      closeAddEtfModal();
+    } catch (err) { setEtfAddModalStatus(err.message || 'Save failed — try again.', 'err'); }
+    finally { saveBtn.disabled = false; }
+  }
+
+  // ==== Edit / Sell ETF Lots ====
+  function etfLotDateToIso(s) {
+    s = String(s || '').trim();
+    if (!s) return '';
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) { const [, d, mo, y] = m; return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`; }
+    const dt = new Date(s);
+    return !isNaN(dt.getTime()) ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}` : '';
+  }
+  async function fetchEtfLots(symbol) {
+    const url = `${SETTINGS_WEBAPP_URL}?action=etfLots&symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(SETTINGS_TOKEN)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'Could not load lots');
+    return data.lots || [];
+  }
+
+  let etfEditSymbol = null, etfEditLots = [];
+  function setEtfEditModalStatus(t, c) { const el = document.getElementById('etfEditModalStatus'); el.textContent = t || ''; el.className = 'modal-status' + (c ? ' ' + c : ''); }
+  function renderEtfEditLotsRows() {
+    const body = document.getElementById('etfEditLotsBody');
+    if (!etfEditLots.length) { body.innerHTML = '<tr><td colspan="4" class="lots-empty">No lots left.</td></tr>'; return; }
+    body.innerHTML = etfEditLots.map(l => `<tr data-row="${l.rowNumber}">
+      <td><input type="date" class="etf-edit-buydate" value="${etfLotDateToIso(l.buyDate)}"></td>
+      <td><input type="number" class="etf-edit-qty" min="0" step="any" value="${l.qty}"></td>
+      <td><input type="number" class="etf-edit-buyprice" min="0" step="0.01" value="${l.buyPrice}"></td>
+      <td><button type="button" class="lot-del-btn" onclick="deleteEtfLotRow(${l.rowNumber})">🗑</button></td>
+    </tr>`).join('');
+  }
+  async function openEditEtfModal(symbol) {
+    etfEditSymbol = symbol;
+    document.getElementById('etfEditModalTitle').textContent = 'Edit Lots — ' + symbol;
+    document.getElementById('etfEditLotsBody').innerHTML = '<tr><td colspan="4" class="lots-empty">Loading…</td></tr>';
+    setEtfEditModalStatus('');
+    document.getElementById('etfEditModalOverlay').classList.add('show');
+    try { etfEditLots = await fetchEtfLots(symbol); renderEtfEditLotsRows(); }
+    catch (err) { document.getElementById('etfEditLotsBody').innerHTML = '<tr><td colspan="4" class="lots-empty">Could not load lots.</td></tr>'; setEtfEditModalStatus(err.message, 'err'); }
+  }
+  function closeEditEtfModal() { document.getElementById('etfEditModalOverlay').classList.remove('show'); }
+  async function deleteEtfLotRow(rowNumber) {
+    if (!confirm('Delete this lot? This can\'t be undone.')) return;
+    setEtfEditModalStatus('Deleting…');
+    try {
+      await postAction({ action: 'deleteEtfLot', symbol: etfEditSymbol, rowNumber });
+      etfEditLots = etfEditLots.filter(l => l.rowNumber !== rowNumber);
+      renderEtfEditLotsRows();
+      setEtfEditModalStatus('Deleted ✓', 'ok');
+      await syncAll();
+    } catch (err) { setEtfEditModalStatus(err.message || 'Delete failed.', 'err'); }
+  }
+  async function submitEditEtfLots() {
+    const saveBtn = document.getElementById('etfEditSaveBtn');
+    const rows = Array.from(document.querySelectorAll('#etfEditLotsBody tr[data-row]'));
+    if (!rows.length) { closeEditEtfModal(); return; }
+    const updates = [];
+    for (const row of rows) {
+      const rowNumber = Number(row.getAttribute('data-row'));
+      const buyDate = row.querySelector('.etf-edit-buydate').value;
+      const qty = Number(row.querySelector('.etf-edit-qty').value);
+      const buyPrice = Number(row.querySelector('.etf-edit-buyprice').value);
+      if (!buyDate) { setEtfEditModalStatus('Every lot needs a Buy Date.', 'err'); return; }
+      if (!isFinite(qty) || qty <= 0) { setEtfEditModalStatus('Every lot needs a Quantity > 0.', 'err'); return; }
+      if (!isFinite(buyPrice) || buyPrice <= 0) { setEtfEditModalStatus('Every lot needs a Buy Price > 0.', 'err'); return; }
+      updates.push({ rowNumber, buyDate, qty, buyPrice });
+    }
+    saveBtn.disabled = true;
+    setEtfEditModalStatus('Saving…');
+    try {
+      for (const u of updates) await postAction({ action: 'editEtfLot', symbol: etfEditSymbol, rowNumber: u.rowNumber, buyDate: u.buyDate, qty: u.qty, buyPrice: u.buyPrice });
+      setEtfEditModalStatus('Saved ✓ Refreshing…', 'ok');
+      await syncAll();
+      closeEditEtfModal();
+    } catch (err) { setEtfEditModalStatus(err.message || 'Save failed.', 'err'); }
+    finally { saveBtn.disabled = false; }
+  }
+
+  let etfSellSymbol = null, etfSellLots = [];
+  function setEtfSellModalStatus(t, c) { const el = document.getElementById('etfSellModalStatus'); el.textContent = t || ''; el.className = 'modal-status' + (c ? ' ' + c : ''); }
+  function renderEtfSellLotsRows() {
+    const body = document.getElementById('etfSellLotsBody');
+    if (!etfSellLots.length) { body.innerHTML = '<tr><td colspan="4" class="lots-empty">No lots to sell.</td></tr>'; return; }
+    body.innerHTML = etfSellLots.map(l => `<tr data-row="${l.rowNumber}" data-qty="${l.qty}">
+      <td>${escapeHtmlText(l.buyDate)}</td><td>${fmtNum(l.qty, 0)}</td><td>${fmtNum(l.buyPrice)}</td>
+      <td><input type="number" class="etf-sell-qty" min="0" max="${l.qty}" step="any" placeholder="0"></td>
+    </tr>`).join('');
+  }
+  async function openSellEtfModal(symbol) {
+    etfSellSymbol = symbol;
+    document.getElementById('etfSellModalTitle').textContent = 'Log Sale — ' + symbol;
+    document.getElementById('etfSellLotsBody').innerHTML = '<tr><td colspan="4" class="lots-empty">Loading…</td></tr>';
+    document.getElementById('etfSellSellDate').value = todayIsoDate();
+    document.getElementById('etfSellSellPrice').value = ''; document.getElementById('etfSellReason').value = '';
+    setEtfSellModalStatus('');
+    document.getElementById('etfSellModalOverlay').classList.add('show');
+    try { etfSellLots = await fetchEtfLots(symbol); renderEtfSellLotsRows(); }
+    catch (err) { document.getElementById('etfSellLotsBody').innerHTML = '<tr><td colspan="4" class="lots-empty">Could not load lots.</td></tr>'; setEtfSellModalStatus(err.message, 'err'); }
+  }
+  function closeSellEtfModal() { document.getElementById('etfSellModalOverlay').classList.remove('show'); }
+  async function submitSellEtfForm() {
+    const saveBtn = document.getElementById('etfSellSaveBtn');
+    const sellDate = document.getElementById('etfSellSellDate').value;
+    const sellPrice = Number(document.getElementById('etfSellSellPrice').value);
+    const reason = document.getElementById('etfSellReason').value.trim();
+    if (!sellDate) { setEtfSellModalStatus('Sell Date is required.', 'err'); return; }
+    if (!isFinite(sellPrice) || sellPrice <= 0) { setEtfSellModalStatus('Enter a valid Sell Price.', 'err'); return; }
+    const rows = Array.from(document.querySelectorAll('#etfSellLotsBody tr[data-row]'));
+    const lots = [];
+    for (const row of rows) {
+      const rowNumber = Number(row.getAttribute('data-row'));
+      const heldQty = Number(row.getAttribute('data-qty'));
+      const sellQtyRaw = row.querySelector('.etf-sell-qty').value.trim();
+      if (sellQtyRaw === '') continue;
+      const sellQty = Number(sellQtyRaw);
+      if (sellQty === 0) continue;
+      if (!isFinite(sellQty) || sellQty < 0) { setEtfSellModalStatus('Sell Qty must be positive.', 'err'); return; }
+      if (sellQty > heldQty) { setEtfSellModalStatus(`That lot only holds ${fmtNum(heldQty, 0)}.`, 'err'); return; }
+      lots.push({ rowNumber, sellQty });
+    }
+    if (!lots.length) { setEtfSellModalStatus('Enter a Sell Qty for at least one lot.', 'err'); return; }
+    saveBtn.disabled = true;
+    setEtfSellModalStatus('Logging sale…');
+    try {
+      await postAction({ action: 'sellEtfLots', symbol: etfSellSymbol, sellDate, sellPrice, reason, lots });
+      setEtfSellModalStatus('Logged ✓ Refreshing…', 'ok');
+      await syncAll();
+      closeSellEtfModal();
+    } catch (err) { setEtfSellModalStatus(err.message || 'Save failed.', 'err'); }
+    finally { saveBtn.disabled = false; }
+  }
+
+  // ---- Boot ----
+  syncAll();
+  setInterval(syncAll, 3 * 60 * 1000); // silent 3-min auto-refresh, no UI selector — keep this page minimal
+</script>
+</body>
+</html>
