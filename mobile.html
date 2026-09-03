@@ -74,6 +74,13 @@
   .stat-tile .value { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; font-weight: 700; }
   .stat-tile .sub { font-size: 10px; margin-top: 2px; }
 
+  /* Per-book (Stock / ETF) Value · Overall Gain · Today mini-tiles — sits inside each section, above its table */
+  .book-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 12px 10px; }
+  .mini-tile { background: var(--surface-2); border-radius: 10px; padding: 7px 6px; text-align: center; }
+  .mini-tile .label { font-size: 8.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); margin-bottom: 3px; }
+  .mini-tile .value { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; font-weight: 700; }
+  .mini-tile .sub { font-size: 9.5px; margin-top: 1px; }
+
   .section { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--card-shadow); margin-bottom: 14px; overflow: hidden; }
   .section-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 10px; }
   .section-head h2 { font-size: 13.5px; margin: 0; font-weight: 700; }
@@ -201,12 +208,17 @@
       </div>
       <button type="button" class="add-btn write-only" onclick="openAddStockModal()">+ Add</button>
     </div>
+    <div class="book-summary">
+      <div class="mini-tile"><div class="label">Value</div><div class="value" id="stockSumValue">—</div><div class="sub" id="stockSumInvested" style="color:var(--text-muted)">—</div></div>
+      <div class="mini-tile"><div class="label">Overall Gain</div><div class="value" id="stockSumGain">—</div><div class="sub" id="stockSumGainPct">—</div></div>
+      <div class="mini-tile"><div class="label">Today</div><div class="value" id="stockSumToday">—</div><div class="sub" id="stockSumTodayPct">—</div></div>
+    </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Stock</th><th>Qty</th><th>LTP</th><th>Invested</th><th>Value</th><th>Gain</th><th>Gain %</th></tr></thead>
-        <tbody id="stocksBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+        <thead><tr><th>Stock</th><th>Qty</th><th>LTP</th><th>Invested</th><th>Value</th><th>Gain</th><th>Gain %</th><th>Day ₹</th><th>Day %</th></tr></thead>
+        <tbody id="stocksBody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
         <tfoot><tr id="stocksTotalRow" style="display:none">
-          <td>Total</td><td></td><td></td><td id="stocksTotInv"></td><td id="stocksTotVal"></td><td id="stocksTotGain"></td><td id="stocksTotGainPct"></td>
+          <td>Total</td><td></td><td></td><td id="stocksTotInv"></td><td id="stocksTotVal"></td><td id="stocksTotGain"></td><td id="stocksTotGainPct"></td><td id="stocksTotDayGain"></td><td id="stocksTotDayPct"></td>
         </tr></tfoot>
       </table>
     </div>
@@ -220,12 +232,17 @@
       </div>
       <button type="button" class="add-btn write-only" onclick="openAddEtfModal()">+ Add</button>
     </div>
+    <div class="book-summary">
+      <div class="mini-tile"><div class="label">Value</div><div class="value" id="etfSumValue">—</div><div class="sub" id="etfSumInvested" style="color:var(--text-muted)">—</div></div>
+      <div class="mini-tile"><div class="label">Overall Gain</div><div class="value" id="etfSumGain">—</div><div class="sub" id="etfSumGainPct">—</div></div>
+      <div class="mini-tile"><div class="label">Today</div><div class="value" id="etfSumToday">—</div><div class="sub" id="etfSumTodayPct">—</div></div>
+    </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>ETF</th><th>Qty</th><th>LTP</th><th>Invested</th><th>Value</th><th>Gain</th><th>Gain %</th></tr></thead>
-        <tbody id="etfBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+        <thead><tr><th>ETF</th><th>Qty</th><th>LTP</th><th>Invested</th><th>Value</th><th>Gain</th><th>Gain %</th><th>Day ₹</th><th>Day %</th></tr></thead>
+        <tbody id="etfBody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
         <tfoot><tr id="etfTotalRow" style="display:none">
-          <td>Total</td><td></td><td></td><td id="etfTotInv"></td><td id="etfTotVal"></td><td id="etfTotGain"></td><td id="etfTotGainPct"></td>
+          <td>Total</td><td></td><td></td><td id="etfTotInv"></td><td id="etfTotVal"></td><td id="etfTotGain"></td><td id="etfTotGainPct"></td><td id="etfTotDayGain"></td><td id="etfTotDayPct"></td>
         </tr></tfoot>
       </table>
     </div>
@@ -476,7 +493,7 @@
   // ---- Render: Stocks ----
   function renderStocks(stocks) {
     const body = document.getElementById('stocksBody');
-    if (!stocks.length) { body.innerHTML = '<tr class="empty-row"><td colspan="7">No holdings.</td></tr>'; document.getElementById('stocksTotalRow').style.display = 'none'; document.getElementById('stocksMeta').textContent = '0 holdings'; return; }
+    if (!stocks.length) { body.innerHTML = '<tr class="empty-row"><td colspan="9">No holdings.</td></tr>'; document.getElementById('stocksTotalRow').style.display = 'none'; document.getElementById('stocksMeta').textContent = '0 holdings'; return; }
     const sorted = [...stocks].sort((a, b) => a.symbol.localeCompare(b.symbol));
     body.innerHTML = sorted.map(s => `<tr>
       <td>${escapeHtmlText(s.symbol)}<span class="row-actions write-only">
@@ -489,12 +506,17 @@
       <td>${fmtMoney(s.value)}</td>
       <td class="${chgClass(s.gain)}">${(s.gain >= 0 ? '+' : '') + fmtMoney(s.gain)}</td>
       <td class="${chgClass(s.gainPct)}">${fmtPct(s.gainPct)}</td>
+      <td class="${chgClass(s.dayGain)}">${isFinite(s.dayGain) ? (s.dayGain >= 0 ? '+' : '') + fmtMoney(s.dayGain) : '—'}</td>
+      <td class="${chgClass(s.dayPct)}">${fmtPct(s.dayPct)}</td>
     </tr>`).join('');
     const inv = sumBy(stocks, 'invested'), val = sumBy(stocks, 'value'), gain = val - inv, gainPct = inv ? (gain / inv) * 100 : 0;
+    const dayGain = sumBy(stocks, 'dayGain'); const prevVal = val - dayGain; const dayPct = prevVal ? (dayGain / prevVal) * 100 : 0;
     document.getElementById('stocksTotInv').textContent = fmtMoney(inv);
     document.getElementById('stocksTotVal').textContent = fmtMoney(val);
     const gEl = document.getElementById('stocksTotGain'); gEl.textContent = (gain >= 0 ? '+' : '') + fmtMoney(gain); gEl.className = chgClass(gain);
     const gpEl = document.getElementById('stocksTotGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = chgClass(gainPct);
+    const dgEl = document.getElementById('stocksTotDayGain'); dgEl.textContent = (dayGain >= 0 ? '+' : '') + fmtMoney(dayGain); dgEl.className = chgClass(dayGain);
+    const dpEl = document.getElementById('stocksTotDayPct'); dpEl.textContent = fmtPct(dayPct); dpEl.className = chgClass(dayPct);
     document.getElementById('stocksTotalRow').style.display = '';
     document.getElementById('stocksMeta').textContent = `${stocks.length} holding${stocks.length === 1 ? '' : 's'} · ${fmtMoney(val)}`;
   }
@@ -502,7 +524,7 @@
   // ---- Render: ETFs ----
   function renderEtfs(etfs) {
     const body = document.getElementById('etfBody');
-    if (!etfs.length) { body.innerHTML = '<tr class="empty-row"><td colspan="7">No holdings.</td></tr>'; document.getElementById('etfTotalRow').style.display = 'none'; document.getElementById('etfMeta').textContent = '0 holdings'; return; }
+    if (!etfs.length) { body.innerHTML = '<tr class="empty-row"><td colspan="9">No holdings.</td></tr>'; document.getElementById('etfTotalRow').style.display = 'none'; document.getElementById('etfMeta').textContent = '0 holdings'; return; }
     const sorted = [...etfs].sort((a, b) => a.symbol.localeCompare(b.symbol));
     body.innerHTML = sorted.map(e => `<tr>
       <td>${escapeHtmlText(e.symbol)}<span class="row-actions write-only">
@@ -515,18 +537,37 @@
       <td>${fmtMoney(e.value)}</td>
       <td class="${chgClass(e.gain)}">${(e.gain >= 0 ? '+' : '') + fmtMoney(e.gain)}</td>
       <td class="${chgClass(e.gainPct)}">${fmtPct(e.gainPct)}</td>
+      <td class="${chgClass(e.dayGain)}">${isFinite(e.dayGain) ? (e.dayGain >= 0 ? '+' : '') + fmtMoney(e.dayGain) : '—'}</td>
+      <td class="${chgClass(e.dayPct)}">${fmtPct(e.dayPct)}</td>
     </tr>`).join('');
     const inv = sumBy(etfs, 'invested'), val = sumBy(etfs, 'value'), gain = val - inv, gainPct = inv ? (gain / inv) * 100 : 0;
+    const dayGain = sumBy(etfs, 'dayGain'); const prevVal = val - dayGain; const dayPct = prevVal ? (dayGain / prevVal) * 100 : 0;
     document.getElementById('etfTotInv').textContent = fmtMoney(inv);
     document.getElementById('etfTotVal').textContent = fmtMoney(val);
     const gEl = document.getElementById('etfTotGain'); gEl.textContent = (gain >= 0 ? '+' : '') + fmtMoney(gain); gEl.className = chgClass(gain);
     const gpEl = document.getElementById('etfTotGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = chgClass(gainPct);
+    const dgEl = document.getElementById('etfTotDayGain'); dgEl.textContent = (dayGain >= 0 ? '+' : '') + fmtMoney(dayGain); dgEl.className = chgClass(dayGain);
+    const dpEl = document.getElementById('etfTotDayPct'); dpEl.textContent = fmtPct(dayPct); dpEl.className = chgClass(dayPct);
     document.getElementById('etfTotalRow').style.display = '';
     document.getElementById('etfMeta').textContent = `${etfs.length} holding${etfs.length === 1 ? '' : 's'} · ${fmtMoney(val)}`;
   }
 
-  // ---- Render: top summary tiles (Stocks + ETFs combined) ----
+  // ---- Render: Value / Overall Gain / Today mini-tiles for one book (Stocks or ETFs), and the combined
+  // top summary strip — same computeAgg-style math as index.html's renderBookSplitTile/computeAgg. ----
+  function renderBookSummary(prefix, list) {
+    const inv = sumBy(list, 'invested'), val = sumBy(list, 'value'), gain = val - inv, gainPct = inv ? (gain / inv) * 100 : 0;
+    const dayGain = sumBy(list, 'dayGain'); const prevVal = val - dayGain; const dayPct = prevVal ? (dayGain / prevVal) * 100 : 0;
+    document.getElementById(prefix + 'SumValue').textContent = fmtMoney(val);
+    document.getElementById(prefix + 'SumInvested').textContent = 'Inv. ' + fmtMoney(inv);
+    const gEl = document.getElementById(prefix + 'SumGain'); gEl.textContent = (gain >= 0 ? '+' : '') + fmtMoney(gain); gEl.className = 'value ' + chgClass(gain);
+    const gpEl = document.getElementById(prefix + 'SumGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = 'sub ' + chgClass(gainPct);
+    const tEl = document.getElementById(prefix + 'SumToday'); tEl.textContent = (dayGain >= 0 ? '+' : '') + fmtMoney(dayGain); tEl.className = 'value ' + chgClass(dayGain);
+    const tpEl = document.getElementById(prefix + 'SumTodayPct'); tpEl.textContent = fmtPct(dayPct); tpEl.className = 'sub ' + chgClass(dayPct);
+  }
+
   function renderSummary(stocks, etfs) {
+    // Top-of-page combined strip uses its own plain ids (sumValue/sumGain/sumToday, no "Sum" infix) —
+    // kept separate from renderBookSummary's prefix+SumX pattern used by the per-book mini-tiles below.
     const all = [...stocks, ...etfs];
     const inv = sumBy(all, 'invested'), val = sumBy(all, 'value'), gain = val - inv, gainPct = inv ? (gain / inv) * 100 : 0;
     const dayGain = sumBy(all, 'dayGain'); const prevVal = val - dayGain; const dayPct = prevVal ? (dayGain / prevVal) * 100 : 0;
@@ -536,6 +577,9 @@
     const gpEl = document.getElementById('sumGainPct'); gpEl.textContent = fmtPct(gainPct); gpEl.className = 'sub ' + chgClass(gainPct);
     const tEl = document.getElementById('sumToday'); tEl.textContent = (dayGain >= 0 ? '+' : '') + fmtMoney(dayGain); tEl.className = 'value ' + chgClass(dayGain);
     const tpEl = document.getElementById('sumTodayPct'); tpEl.textContent = fmtPct(dayPct); tpEl.className = 'sub ' + chgClass(dayPct);
+
+    renderBookSummary('stock', stocks);
+    renderBookSummary('etf', etfs);
   }
 
   // ---- Render: Realized Gains (Sold Stocks tab — Stocks + ETFs, most recent first) ----
