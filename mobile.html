@@ -615,6 +615,7 @@
           gain: num(pick(o, 'Overall Gain')),
           gainPct: num(pick(o, 'Overall %', 'Overall Gain %')) * 100,
           dayGain: num(pick(o, 'Day Gain')),
+          dayPct: num(pick(o, 'Day %', 'Day Gain %')) * 100,
         };
       });
       const etfs = extractHoldings(etfRows, ['Quantity']).map(x => {
@@ -627,6 +628,7 @@
           gain: num(pick(o, 'Overall Gain')),
           gainPct: num(pick(o, 'Overall Gain %', 'Overall %')) * 100,
           dayGain: num(pick(o, 'Day Gain')),
+          dayPct: num(pick(o, 'Day Gain %', 'Day %')) * 100,
         };
       });
       if (!stocks.length && !etfs.length) throw new Error('sheet returned no readable holding rows');
