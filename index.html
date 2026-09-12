@@ -3392,7 +3392,7 @@
   }
 
   // Reads the "Indices" tab — one row appended per index per day by the Apps Script updateIndices() job
-  // (Nifty 50, Nifty 500, Nifty Midcap 150, Nifty Bank, Nifty 200, Nifty Smallcap 100 — pulled from
+  // (Nifty 50, Nifty 500, Nifty Midcap 150, Nifty Bank, Nifty 200, NIFTY SMALLCAP 250 — pulled from
   // Google/Yahoo Finance), same append-daily shape as the Price History tab. Grouped here by index name
   // into ascending-by-date series, which powers the tile grid's latest-value/day-change, the Portfolio
   // NAV vs Market Indices chart, and (for Nifty 50 specifically) the Daily Performance chart's
@@ -3512,15 +3512,8 @@
       const last = series.length ? series[series.length - 1] : null;
       const prior = series.length > 1 ? series[series.length - 2] : null;
       const live = lastLiveIndices[name];
-      const isProxyIndex = name === 'Nifty Midcap 150'; // no direct Google Finance index ticker for this one
-
       let displayValue = NaN, chg = NaN, chgPct = NaN, usedLive = false;
-      if (isProxyIndex && live && isFinite(live.changePct) && last) {
-        chgPct = live.changePct;
-        displayValue = last.value * (1 + chgPct / 100);
-        chg = displayValue - last.value;
-        usedLive = true;
-      } else if (!isProxyIndex && live && isFinite(live.value)) {
+      if (live && isFinite(live.value)) {
         displayValue = live.value;
         chg = isFinite(live.change) ? live.change : NaN;
         chgPct = isFinite(live.changePct) ? live.changePct : NaN;
@@ -3529,7 +3522,7 @@
         displayValue = last.value;
         if (isFinite(last.change) || isFinite(last.changePct)) {
           // Stored day-over-day change from the snapshot itself (Yahoo-sourced indices with no live
-          // tracking source, e.g. Nifty Smallcap 100) — preferred over diffing consecutive stored rows
+          // tracking source, e.g. NIFTY SMALLCAP 250) — preferred over diffing consecutive stored rows
           // below, since that diff is only valid when the sheet has a prior day's row to compare against.
           chg = last.change;
           chgPct = last.changePct;
@@ -5129,7 +5122,7 @@
 
   // Fixed display order/labels for the index tiles (Market Indices panel) and the index-comparison
   // options for the "Portfolio NAV vs Market Indices" chart — keys must match the "Index" column values
-  // the Apps Script snapshotIndices() job writes into the Indices tab. Nifty Bank and Nifty Smallcap 100
+  // the Apps Script snapshotIndices() job writes into the Indices tab. Nifty Bank and NIFTY SMALLCAP 250
   // render as a second row of tiles automatically (renderIndicesTiles below just grids however many names
   // have data) but are NOT pre-checked in the NAV chart's toggle row, since that row's checkboxes are
   // hardcoded to 4 indices in the HTML (Nifty 50, Nifty 500, Nifty Midcap 150, Nifty 200) — see
@@ -5138,11 +5131,11 @@
   // compared against it directly in the NAV chart, unlike Bank/Smallcap which are tile-only.
   const NAV_INDEX_DEFS = [
     { key: 'Nifty 50', label: 'Nifty 50' },
-    { key: 'Nifty 500', label: 'Nifty 500' },
     { key: 'Nifty Midcap 150', label: 'Nifty Midcap 150' },
+    { key: 'Nifty Smallcap 250', label: 'Nifty Smallcap 250' },
     { key: 'Nifty Bank', label: 'Nifty Bank' },
     { key: 'Nifty 200', label: 'Nifty 200' },
-    { key: 'Nifty Smallcap 100', label: 'Nifty Smallcap 100' },
+    { key: 'Nifty 500', label: 'Nifty 500' },
   ];
 
   // Portfolio NAV vs Market Indices — a single chart with the Portfolio NAV line plus one line per
