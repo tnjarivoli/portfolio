@@ -4248,30 +4248,7 @@
     `;
   }
 
-  function renderLookupResultCard(row) {
-    const resultBox = document.getElementById('scorecardLookupResult');
-    const score = computeScorecardV2(row);
-
-    // Deselect any pill button in the top row
-    selectedScoreSymbol = null;
-    document.querySelectorAll('#scorecardSymbolRow .scorecard-symbol-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('scorecardBody').innerHTML = '';
-
-    scorecardLookupSymbol = row.symbol;
-    resultBox.style.display = '';
-    resultBox.innerHTML = `
-      <div class="scorecard-lookup-head">
-        <span class="scorecard-lookup-symbol">${escapeHtmlText(row.symbol)} <span class="scorecard-wl-tag">Lookup — not tracked</span></span>
-        <span class="scorecard-lookup-actions">
-          <button class="stock-add-btn" id="scorecardAddWatchlistBtn" onclick="addLookupSymbolToWatchlist()">+ Add to Watchlist</button>
-          <button class="scorecard-lookup-clear" onclick="clearScorecardLookup()">✕ Clear</button>
-        </span>
-      </div>
-      <div class="stock-modal-status" id="scorecardAddWatchlistStatus" style="margin:-6px 0 12px"></div>
-      ${buildScorecardBodyHtmlV2(score)}
-    `;
-  }
-
+  
   // "+ Add to Watchlist" button on the ad-hoc lookup result card — lets a symbol found via "Look up any
   // stock" be tracked going forward without retyping it into the separate Add Watchlist modal. Reuses the
   // exact same addWatchlist Web App action (and its server-side EditMode gate) as that modal; the only
@@ -4911,9 +4888,16 @@
     const fromDate = from ? new Date(from + 'T00:00:00') : null;
     const toDate = to ? new Date(to + 'T23:59:59') : null;
     return rows.filter(r => {
-      if (fromDate && (!r.sellDate || r.sellDate < fromDate)) return false;
-      if (toDate && (!r.sellDate || r.sellDate > toDate)) return false;
-      if (soldFilterCategory !== 'All' && (r.category || '') !== soldFilterCategory) return false;
+      // If a row has a valid sell date, check range; if date is missing/unparsed, don't drop it from current FY
+      if (r.sellDate instanceof Date && !isNaN(r.sellDate.getTime())) {
+        if (fromDate && r.sellDate < fromDate) return false;
+        if (toDate && r.sellDate > toDate) return false;
+      }
+      // Handle Category matching gracefully (treat empty/blank category as 'Stock')
+      const cat = (r.category || 'Stock').trim().toLowerCase();
+      if (soldFilterCategory !== 'All') {
+        if (cat !== soldFilterCategory.toLowerCase()) return false;
+      }
       if (soldFilterSymbol && r.symbol !== soldFilterSymbol) return false;
       return true;
     });
