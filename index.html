@@ -887,31 +887,14 @@
     </div>
   </div>
 
-  <div class="panel" id="analysisPanel">
+  <!-- Top Panel: Breakdown Tables + Growth & Valuation Profile -->
+  <div class="panel" id="breakdownPanel">
     <div class="panel-head">
       <div class="panel-head-left">
-        <h2>Analysis <span class="meta">— Stocks, live from your sheet</span></h2>
+        <h2>Portfolio Breakdown &amp; Valuation <span class="meta">— Sector &amp; Market Cap allocations, live from your sheet</span></h2>
       </div>
-      <button type="button" class="panel-toggle-btn" id="analysisDetailsToggleBtn" onclick="toggleAnalysisDetails()" title="Show the full sector- and market-cap-wise breakdown as a table">Show Details ▾</button>
     </div>
-    <div class="analysis-grid">
-      <div class="donut-wrap">
-        <div class="donut-title">By Sector</div>
-        <div class="donut-body">
-          <svg id="sectorDonut" viewBox="0 0 140 140" width="150" height="150"></svg>
-          <div class="donut-legend" id="donutLegend"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
-        </div>
-      </div>
-      <div class="donut-wrap">
-        <div class="donut-title">By Market Cap</div>
-        <div class="donut-body">
-          <svg id="capDonut" viewBox="0 0 140 140" width="150" height="150"></svg>
-          <div class="donut-legend" id="capDonutLegend"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
-        </div>
-      </div>
-      <div class="analysis-stats" id="analysisStats"></div>
-    </div>
-    <div class="analysis-details" id="analysisDetailsSection" style="display:none">
+    <div class="analysis-details" id="analysisDetailsSection" style="display:grid;margin-top:0;padding-top:0;border-top:none;">
       <div class="analysis-details-col">
         <div class="donut-title">Sector-wise breakdown</div>
         <div class="fy-table-wrap"><table class="fy-table" id="analysisSectorDetailTable">
@@ -960,6 +943,32 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Bottom Panel: Visual Donut Charts & Summary Stats -->
+  <div class="panel" id="analysisPanel">
+    <div class="panel-head">
+      <div class="panel-head-left">
+        <h2>Analysis <span class="meta">— Stocks, live from your sheet</span></h2>
+      </div>
+    </div>
+    <div class="analysis-grid">
+      <div class="donut-wrap">
+        <div class="donut-title">By Sector</div>
+        <div class="donut-body">
+          <svg id="sectorDonut" viewBox="0 0 140 140" width="150" height="150"></svg>
+          <div class="donut-legend" id="donutLegend"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
+        </div>
+      </div>
+      <div class="donut-wrap">
+        <div class="donut-title">By Market Cap</div>
+        <div class="donut-body">
+          <svg id="capDonut" viewBox="0 0 140 140" width="150" height="150"></svg>
+          <div class="donut-legend" id="capDonutLegend"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
+        </div>
+      </div>
+      <div class="analysis-stats" id="analysisStats"></div>
     </div>
   </div>
 
@@ -3099,7 +3108,8 @@
       document.getElementById('analysisCapDetailFoot').innerHTML = '';
       return;
     }
-
+	showPanelUnlessHidden_(document.getElementById('breakdownPanel'));
+    showPanelUnlessHidden_(document.getElementById('analysisPanel'));
     const palette = isDarkMode() ? SECTOR_PALETTE_DARK : SECTOR_PALETTE_LIGHT;
 
     // Sector totals — top 7 by value, smaller sectors folded into "Other" (8-slot categorical ceiling)
@@ -3199,13 +3209,7 @@
   // "Show Details" toggle for the Analysis panel — expands/collapses the sector-/cap-wise breakdown
   // tables at the bottom of the panel. Pure UI state (not persisted) — always starts collapsed on load,
   // same as every other optional detail section in this dashboard.
-  function toggleAnalysisDetails() {
-    const section = document.getElementById('analysisDetailsSection');
-    const btn = document.getElementById('analysisDetailsToggleBtn');
-    const show = section.style.display === 'none';
-    section.style.display = show ? 'grid' : 'none';
-    btn.textContent = show ? 'Hide Details ▴' : 'Show Details ▾';
-  }
+  
 
   // ---- Portfolio Allocation: Stocks vs ETFs mix + a sector donut spanning BOTH holdings types.
   // ETFs have no per-symbol sector in the sheet, so they fold into one "ETFs" bucket rather than
@@ -6334,6 +6338,7 @@
   const PANEL_GROUPS = [
     { key: 'indicesMovers',         label: 'Market Indices & Portfolio Top Movers',     elementIds: ['indicesMoversRow'] },
     { key: 'stocksPortfolio',       label: 'Stocks Portfolio',                          elementIds: ['stocksPortfolioPanel'] },
+    { key: 'breakdown',             label: 'Portfolio Breakdown & Valuation',             elementIds: ['breakdownPanel'] },
     { key: 'analysis',              label: 'Analysis (Sector / Market Cap donut charts)', elementIds: ['analysisPanel'] },
     { key: 'etfPortfolio',          label: 'ETF Portfolio',                             elementIds: ['etfPortfolioPanel'] },
     { key: 'allocation',            label: 'Portfolio Allocation',                      elementIds: ['allocationPanel'] },
