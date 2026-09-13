@@ -653,7 +653,49 @@
   .history-empty { font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; padding: 8px 2px; }
   .history-empty b { color: var(--text-primary); }
   .history-cagr-note { font-size: 11.5px; color: var(--text-muted); margin: -2px 0 10px; }
-
+  /* Portfolio Growth & Valuation card below Market Cap table */
+  .growth-profile-card {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .growth-profile-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .growth-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px 12px;
+  }
+  @media (max-width: 560px) {
+    .growth-profile-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .gp-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .gp-item .gp-label {
+    font-size: 10.5px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .gp-item .gp-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
   @media print {
     :root, :root[data-theme="dark"] {
       color-scheme: light;
@@ -885,6 +927,38 @@
           <tbody id="analysisCapDetailBody"></tbody>
           <tfoot id="analysisCapDetailFoot"></tfoot>
         </table></div>
+
+        <div class="growth-profile-card" id="growthProfileCard">
+          <div class="growth-profile-title">
+            <span>Portfolio Growth &amp; Valuation</span>
+          </div>
+          <div class="growth-profile-grid">
+            <div class="gp-item">
+              <span class="gp-label">3Y Sales CAGR</span>
+              <span class="gp-val" id="gpSalesGrowth">—</span>
+            </div>
+            <div class="gp-item">
+              <span class="gp-label">Harmonic P/E</span>
+              <span class="gp-val" id="gpHarmonicPe">—</span>
+            </div>
+            <div class="gp-item">
+              <span class="gp-label">Portfolio Beta</span>
+              <span class="gp-val" id="gpBeta">—</span>
+            </div>
+            <div class="gp-item">
+              <span class="gp-label">3Y EPS Growth</span>
+              <span class="gp-val chg-up" id="gpEpsGrowth">—</span>
+            </div>
+            <div class="gp-item">
+              <span class="gp-label">Portfolio PEG</span>
+              <span class="gp-val" id="gpPegRatio">—</span>
+            </div>
+            <div class="gp-item">
+              <span class="gp-label">Equity EPS Growth</span>
+              <span class="gp-val chg-up" id="gpPureEpsGrowth">—</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1507,8 +1581,10 @@
   const NEWS_SHEET_NAME = 'News'; // auto-populated daily by the Apps Script updateNewsFeed() job — powers the Company News panel
   const ANALYST_SHEET_NAME = 'Analyst Ratings'; // auto-populated weekly by the Apps Script updateAnalystRatings() job — powers the Analyst Consensus panel
   const INSIGHTS_SHEET_NAME = 'Insights'; // auto-populated weekly by the Apps Script updateInsights() job — powers the Company Insights panel
-  const XIRR_HISTORY_SHEET_NAME = 'XirrHistory'; // auto-populated daily by the Apps Script snapshotXirrHistory() job (runs alongside snapshotPortfolioHistory) — powers the XIRR Performance panel
-
+  const XIRR_HISTORY_SHEET_NAME = 'XirrHistory'; // auto-populated daily by the Apps Script snapshotXirrHistory() job
+  const GROWTH_SHEET_NAME = 'Growth';
+  
+  let lastGrowthMetrics = {};
   let autoTimer = null;
   let lastStocks = [];
   let lastEtfs = [];
@@ -2323,6 +2399,7 @@
         syncDashboardSettings(), // independent, optional — saved column-visibility choice for the Fundamentals/Watchlist panels
         syncXirrHistory(),   // independent, optional — daily Total/Stock/ETF XIRR snapshots for the XIRR Performance panel
         syncDividends(),     // independent, optional — manually-logged dividend entries for the Dividends Received mini-tile
+		syncGrowthTab(),     // independent, optional — pulls Growth tab metrics
       ]);
       enforceHiddenPanels(); // safety net — re-clamp anything a data-driven render above might have shown despite being user-hidden
     } catch (err) {
@@ -4072,55 +4149,123 @@
     return out;
   }
 
+
+  // In-memory lookup cache to prevent re-fetching recent stocks
+  const scorecardLookupCache = new Map();
+
   async function runScorecardLookup() {
     const input = document.getElementById('scorecardLookupInput');
     const status = document.getElementById('scorecardLookupStatus');
     const resultBox = document.getElementById('scorecardLookupResult');
     const btn = document.getElementById('scorecardLookupBtn');
     const sym = (input.value || '').trim().toUpperCase();
-    if (!sym) { status.textContent = 'Enter a symbol first.'; status.className = 'scorecard-lookup-status err'; return; }
+
+    if (!sym) {
+      status.textContent = 'Enter a symbol first.';
+      status.className = 'scorecard-lookup-status err';
+      return;
+    }
+
+    // Optimization 1: If the stock is ALREADY in your Holdings or Watchlist, load it immediately (0ms)
+    const existing = allScorecardCandidates().find(x => normSym(x.symbol) === normSym(sym));
+    if (existing) {
+      status.textContent = `${sym} found in your tracked list ✓`;
+      status.className = 'scorecard-lookup-status ok';
+      selectScoreSymbol(existing.symbol);
+      const cardEl = document.getElementById('scorecardBody');
+      if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+
+    // Optimization 2: Check frontend in-memory cache (Instant 0ms)
+    if (scorecardLookupCache.has(sym)) {
+      status.textContent = '';
+      const cachedRow = scorecardLookupCache.get(sym);
+      renderLookupResultCard(cachedRow);
+      return;
+    }
 
     btn.disabled = true;
-    status.textContent = `Looking up ${sym} on Screener.in… (can take up to 15s)`;
+    status.textContent = `Looking up ${sym}…`;
     status.className = 'scorecard-lookup-status';
     resultBox.style.display = 'none';
 
+    // Optimization 3: Abort fetch after 12s so it doesn't freeze or hang indefinitely
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
-      const res = await fetch(SETTINGS_WEBAPP_URL + '?action=scorecardLookup&symbol=' + encodeURIComponent(sym));
+      const res = await fetch(SETTINGS_WEBAPP_URL + '?action=scorecardLookup&symbol=' + encodeURIComponent(sym), {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       const data = await res.json();
-      if (data.status !== 'ok') {
-        status.textContent = data.message || 'Lookup failed — please check the symbol.';
-        status.className = 'scorecard-lookup-status err';
-        return;
+      if (data.status !== 'ok' || !data.row) {
+        throw new Error(data.message || 'Lookup failed — please check the symbol.');
       }
+
       const row = coerceLookupRow(Object.assign({ isHolding: false }, data.row, { sector: sectorForSymbol(data.row.symbol) }));
-      const score = computeScorecardV2(row);
+      scorecardLookupCache.set(sym, row);
       status.textContent = '';
-
-      // Only one detail card at a time — a lookup replaces whatever pill-selected card was showing.
-      selectedScoreSymbol = null;
-      document.querySelectorAll('#scorecardSymbolRow .scorecard-symbol-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('scorecardBody').innerHTML = '';
-
-      scorecardLookupSymbol = row.symbol;
-      resultBox.style.display = '';
-      resultBox.innerHTML = `
-        <div class="scorecard-lookup-head">
-          <span class="scorecard-lookup-symbol">${escapeHtmlText(row.symbol)} <span class="scorecard-wl-tag">Lookup — not tracked</span></span>
-          <span class="scorecard-lookup-actions">
-            <button class="stock-add-btn" id="scorecardAddWatchlistBtn" onclick="addLookupSymbolToWatchlist()">+ Add to Watchlist</button>
-            <button class="scorecard-lookup-clear" onclick="clearScorecardLookup()">✕ Clear</button>
-          </span>
-        </div>
-        <div class="stock-modal-status" id="scorecardAddWatchlistStatus" style="margin:-6px 0 12px"></div>
-        ${buildScorecardBodyHtmlV2(score)}
-      `;
+      renderLookupResultCard(row);
     } catch (err) {
-      status.textContent = 'Lookup failed: ' + (err && err.message ? err.message : String(err));
+      clearTimeout(timeoutId);
+      const isTimeout = err.name === 'AbortError';
+      status.textContent = isTimeout 
+        ? `Request timed out for ${sym}. Screener is slow right now — please try once more.` 
+        : 'Lookup failed: ' + (err && err.message ? err.message : String(err));
       status.className = 'scorecard-lookup-status err';
     } finally {
       btn.disabled = false;
     }
+  }
+
+  function renderLookupResultCard(row) {
+    const resultBox = document.getElementById('scorecardLookupResult');
+    const score = computeScorecardV2(row);
+
+    selectedScoreSymbol = null;
+    document.querySelectorAll('#scorecardSymbolRow .scorecard-symbol-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('scorecardBody').innerHTML = '';
+
+    scorecardLookupSymbol = row.symbol;
+    resultBox.style.display = '';
+    resultBox.innerHTML = `
+      <div class="scorecard-lookup-head">
+        <span class="scorecard-lookup-symbol">${escapeHtmlText(row.symbol)} <span class="scorecard-wl-tag">Lookup — not tracked</span></span>
+        <span class="scorecard-lookup-actions">
+          <button class="stock-add-btn" id="scorecardAddWatchlistBtn" onclick="addLookupSymbolToWatchlist()">+ Add to Watchlist</button>
+          <button class="scorecard-lookup-clear" onclick="clearScorecardLookup()">✕ Clear</button>
+        </span>
+      </div>
+      <div class="stock-modal-status" id="scorecardAddWatchlistStatus" style="margin:-6px 0 12px"></div>
+      ${buildScorecardBodyHtmlV2(score)}
+    `;
+  }
+
+  function renderLookupResultCard(row) {
+    const resultBox = document.getElementById('scorecardLookupResult');
+    const score = computeScorecardV2(row);
+
+    // Deselect any pill button in the top row
+    selectedScoreSymbol = null;
+    document.querySelectorAll('#scorecardSymbolRow .scorecard-symbol-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('scorecardBody').innerHTML = '';
+
+    scorecardLookupSymbol = row.symbol;
+    resultBox.style.display = '';
+    resultBox.innerHTML = `
+      <div class="scorecard-lookup-head">
+        <span class="scorecard-lookup-symbol">${escapeHtmlText(row.symbol)} <span class="scorecard-wl-tag">Lookup — not tracked</span></span>
+        <span class="scorecard-lookup-actions">
+          <button class="stock-add-btn" id="scorecardAddWatchlistBtn" onclick="addLookupSymbolToWatchlist()">+ Add to Watchlist</button>
+          <button class="scorecard-lookup-clear" onclick="clearScorecardLookup()">✕ Clear</button>
+        </span>
+      </div>
+      <div class="stock-modal-status" id="scorecardAddWatchlistStatus" style="margin:-6px 0 12px"></div>
+      ${buildScorecardBodyHtmlV2(score)}
+    `;
   }
 
   // "+ Add to Watchlist" button on the ad-hoc lookup result card — lets a symbol found via "Look up any
@@ -4180,6 +4325,96 @@
   // Reads the "Fundamentals" tab, auto-populated once a day by the Apps Script updateFundamentals()
   // job (P/E, ROCE, ROE pulled from Screener.in's public company page). Optional — if this tab doesn't
   // exist yet, or the daily job hasn't run yet, the panel just stays hidden, same as Realized Gains does.
+  async function syncGrowthTab() {
+    try {
+      // Uses raw JSONP response to bypass blank header cell drops in gvizToObjects
+      const resp = await jsonpFetch(gvizUrl(GROWTH_SHEET_NAME));
+      if (!resp || !resp.table || !resp.table.rows) throw new Error('No growth data');
+      
+      const metrics = {};
+      resp.table.rows.forEach(r => {
+        if (!r.c || r.c.length < 2) return;
+        const rawKey = r.c[0] ? (r.c[0].f || r.c[0].v || '') : '';
+        const rawVal = r.c[1] ? (r.c[1].v !== null && r.c[1].v !== undefined ? r.c[1].v : r.c[1].f) : null;
+        
+        const key = String(rawKey).trim().toLowerCase();
+        const val = num(rawVal);
+        if (key && isFinite(val)) metrics[key] = val;
+      });
+
+      renderGrowthProfile(metrics);
+    } catch (err) {
+      renderGrowthProfileFromHoldings();
+    }
+  }
+
+  function renderGrowthProfile(m) {
+    if (!m || typeof m !== 'object') {
+      renderGrowthProfileFromHoldings();
+      return;
+    }
+    
+    // Formats numbers cleanly whether passed as decimals (0.375) or whole percentages (37.53)
+    const fmtPctVal = v => {
+      if (!isFinite(v)) return '—';
+      const pct = (Math.abs(v) <= 1 && v !== 0) ? v * 100 : v;
+      return pct.toFixed(2) + '%';
+    };
+    const fmtDecVal = (v, d = 2) => isFinite(v) ? v.toFixed(d) : '—';
+    const setEl = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+    // Matches normalized keys from column A of your Growth tab
+    const findKey = term => {
+      const match = Object.keys(m).find(k => k.includes(term.toLowerCase()));
+      return match !== undefined ? m[match] : NaN;
+    };
+
+    const sales = findKey('sales growth');
+    const epsTotal = findKey('blended 3y eps');
+    const epsPure = findKey('portfolio eps');
+    const pe = findKey('portfolio p/e');
+    const peg = findKey('peg');
+    const beta = findKey('beta');
+
+    setEl('gpSalesGrowth', fmtPctVal(sales));
+    setEl('gpEpsGrowth', fmtPctVal(epsTotal));
+    setEl('gpPureEpsGrowth', fmtPctVal(epsPure));
+    setEl('gpHarmonicPe', fmtDecVal(pe, 2));
+    setEl('gpPegRatio', fmtDecVal(peg, 2));
+    setEl('gpBeta', fmtDecVal(beta, 2));
+  }
+
+  function renderGrowthProfileFromHoldings() {
+    if (!lastFundamentals || !lastFundamentals.length || !lastStocks || !lastStocks.length) return;
+    
+    // Calculates directly using holding values from the active book
+    const valueMap = new Map(lastStocks.map(s => [normSym(s.symbol), isFinite(s.value) ? s.value : 0]));
+    let totalValue = 0, sumSales = 0, sumEps = 0, sumInvPe = 0, sumBeta = 0;
+
+    lastFundamentals.forEach(f => {
+      const val = valueMap.get(normSym(f.symbol)) || 0;
+      if (val > 0) {
+        totalValue += val;
+        if (isFinite(f.sales3yr)) sumSales += (val * f.sales3yr);
+        if (isFinite(f.eps3yr)) sumEps += (val * f.eps3yr);
+        if (isFinite(f.pe) && f.pe > 0) sumInvPe += (val / f.pe);
+        if (isFinite(f.beta)) sumBeta += (val * f.beta);
+      }
+    });
+
+    if (totalValue > 0) {
+      const pureEps = sumEps / totalValue;
+      const pe = sumInvPe > 0 ? (totalValue / sumInvPe) : NaN;
+      renderGrowthProfile({
+        'sales growth': sumSales / totalValue,
+        'blended 3y eps': pureEps,
+        'portfolio eps': pureEps,
+        'portfolio p/e': pe,
+        'peg': (isFinite(pe) && pureEps > 0) ? (pe / pureEps) : NaN,
+        'beta': sumBeta / totalValue
+      });
+    }
+  }
   async function syncFundamentals() {
     try {
       const rows = await fetchSheet(FUNDAMENTALS_SHEET_NAME);
