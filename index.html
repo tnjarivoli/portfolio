@@ -1764,7 +1764,7 @@
   // visible (marked fixed: true on its column def); everything else can be hidden per table. Persisted
   // to the "DashboardSettings" tab via the DashboardSettings.gs Web App so the choice survives across
   // devices/sessions — read once at startup by syncDashboardSettings(), written by saveColumnSettings().
-  const SETTINGS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwQN-vEwFZO-Wt5XLwstJkp2tQ6zuF9IZAjn0xtXvuEqajSYpS2luqDyJUV_H97XCqHlg/exec';
+  const SETTINGS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwQPoVpfXS1_dJL-VsKDIFZX6zENvrNffqHWwg6Vy-HwPBv-i8z1Gq6YXfdsxwjeHBugA/exec';
   const SETTINGS_TOKEN = 'CUy6OXWHBeaInxHcWjYjQD8aJ_kiyRxS';
 
   // ---- Edit Mode gate (UX only — see applyEditModeUI()) ---------------------
@@ -3917,9 +3917,12 @@
       score(r) {
         const y1 = r.roeHistY1, y2 = r.roeHistY2, y3 = r.roeHistY3;
         if (!isFinite(y1) || !isFinite(y2) || !isFinite(y3)) return null;
-        const count = [y1, y2, y3].filter(v => v > 15).length;
+        
+        // CHANGED: changed > 15 to >= 15
+        const count = [y1, y2, y3].filter(v => v >= 15).length;
+        
         const points = count === 3 ? 10 : count === 2 ? 5 : 0;
-        return { points, text: `${fmtNum(y3, 0)}% → ${fmtNum(y2, 0)}% → ${fmtNum(y1, 0)}%` };
+        return { points, text: `${Math.round(y3)}% → ${Math.round(y2)}% → ${Math.round(y1)}%` };
       },
     },
     {
