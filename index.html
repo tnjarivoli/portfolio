@@ -892,61 +892,65 @@
   </div>
 
   <!-- Top Panel: Breakdown Tables + Growth & Valuation Profile -->
+  <!-- Top Panel: Breakdown Tables + Growth & Valuation Profile -->
   <div class="panel" id="breakdownPanel">
     <div class="panel-head">
       <div class="panel-head-left">
-        <h2>Portfolio Breakdown &amp; Valuation <span class="meta">— Sector &amp; Market Cap allocations, live from your sheet</span></h2>
+        <h2>Portfolio Breakdown &amp; Valuation <span class="meta">— Sector, Market Cap &amp; Index allocations, live from your sheet</span></h2>
       </div>
     </div>
-    <div class="analysis-details" id="analysisDetailsSection" style="display:grid;margin-top:0;padding-top:0;border-top:none;">
-      <div class="analysis-details-col">
-        <div class="donut-title">Sector-wise breakdown</div>
-        <div class="fy-table-wrap"><table class="fy-table" id="analysisSectorDetailTable">
-          <thead><tr><th>Sector</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
-          <tbody id="analysisSectorDetailBody"></tbody>
-          <tfoot id="analysisSectorDetailFoot"></tfoot>
-        </table></div>
-      </div>
-      <div class="analysis-details-col">
-        <div class="donut-title">Market Cap-wise breakdown</div>
-        <div class="fy-table-wrap"><table class="fy-table" id="analysisCapDetailTable">
-          <thead><tr><th>Market Cap</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
-          <tbody id="analysisCapDetailBody"></tbody>
-          <tfoot id="analysisCapDetailFoot"></tfoot>
-        </table></div>
-
-        <div class="growth-profile-card" id="growthProfileCard">
-          <div class="growth-profile-title">
+    <div class="analysis-details" id="analysisDetailsSection" style="display:grid;grid-template-columns: 1fr 1fr;gap: 20px;margin-top:0;padding-top:0;border-top:none;">
+      
+      <!-- Left Column: Top = Growth & Valuation (fixed size), Bottom = Sector-wise breakdown (grows) -->
+      <div class="analysis-details-col" style="display:flex;flex-direction:column;gap:20px;">
+        
+        <!-- Top Left: Portfolio Growth & Valuation (Double lines layout) -->
+        <div class="growth-profile-card" id="growthProfileCard" style="margin-top:0;">
+          <div class="growth-profile-title" style="margin-bottom: 8px;">
             <span>Portfolio Growth &amp; Valuation</span>
           </div>
-          <div class="growth-profile-grid">
-            <div class="gp-item">
-              <span class="gp-label">3Y Sales CAGR</span>
-              <span class="gp-val" id="gpSalesGrowth">—</span>
-            </div>
-            <div class="gp-item">
-              <span class="gp-label">Harmonic P/E</span>
-              <span class="gp-val" id="gpHarmonicPe">—</span>
-            </div>
-            <div class="gp-item">
-              <span class="gp-label">Portfolio Beta</span>
-              <span class="gp-val" id="gpBeta">—</span>
-            </div>
-            <div class="gp-item">
-              <span class="gp-label">3Y EPS Growth</span>
-              <span class="gp-val chg-up" id="gpEpsGrowth">—</span>
-            </div>
-            <div class="gp-item">
-              <span class="gp-label">Portfolio PEG</span>
-              <span class="gp-val" id="gpPegRatio">—</span>
-            </div>
-            <div class="gp-item">
-              <span class="gp-label">Equity EPS Growth</span>
-              <span class="gp-val chg-up" id="gpPureEpsGrowth">—</span>
-            </div>
+          <div class="growth-profile-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px 12px;">
+            <div class="gp-item"><span class="gp-label">3Y Sales CAGR</span><span class="gp-val" id="gpSalesGrowth">—</span></div>
+            <div class="gp-item"><span class="gp-label">Harmonic P/E</span><span class="gp-val" id="gpHarmonicPe">—</span></div>
+            <div class="gp-item"><span class="gp-label">Portfolio Beta</span><span class="gp-val" id="gpBeta">—</span></div>
+            <div class="gp-item"><span class="gp-label">3Y EPS Growth</span><span class="gp-val chg-up" id="gpEpsGrowth">—</span></div>
+            <div class="gp-item"><span class="gp-label">Portfolio PEG</span><span class="gp-val" id="gpPegRatio">—</span></div>
+            <div class="gp-item"><span class="gp-label">Equity EPS Growth</span><span class="gp-val chg-up" id="gpPureEpsGrowth">—</span></div>
           </div>
         </div>
+
+        <!-- Bottom Left: Sector-wise breakdown (grows as sectors are added) -->
+        <div>
+          <div class="donut-title">Sector-wise breakdown</div>
+          <div class="fy-table-wrap"><table class="fy-table" id="analysisSectorDetailTable" style="width:100%">
+            <thead><tr><th>Sector</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
+            <tbody id="analysisSectorDetailBody"></tbody>
+            <tfoot id="analysisSectorDetailFoot"></tfoot>
+          </table></div>
+        </div>
+
       </div>
+
+      <!-- Right Column: Market Cap stacked above Index -->
+      <div class="analysis-details-col" style="display:flex;flex-direction:column;gap:20px;">
+        <div>
+          <div class="donut-title">Market Cap-wise breakdown</div>
+          <div class="fy-table-wrap"><table class="fy-table" id="analysisCapDetailTable" style="width:100%">
+            <thead><tr><th>Market Cap</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
+            <tbody id="analysisCapDetailBody"></tbody>
+            <tfoot id="analysisCapDetailFoot"></tfoot>
+          </table></div>
+        </div>
+        <div>
+          <div class="donut-title">Index-wise breakdown</div>
+          <div class="fy-table-wrap"><table class="fy-table" id="analysisIndexDetailTable" style="width:100%">
+            <thead><tr><th>Index</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
+            <tbody id="analysisIndexDetailBody"></tbody>
+            <tfoot id="analysisIndexDetailFoot"></tfoot>
+          </table></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -3115,13 +3119,15 @@
       document.getElementById('analysisSectorDetailFoot').innerHTML = '';
       document.getElementById('analysisCapDetailBody').innerHTML = '';
       document.getElementById('analysisCapDetailFoot').innerHTML = '';
+      document.getElementById('analysisIndexDetailBody').innerHTML = '';
+      document.getElementById('analysisIndexDetailFoot').innerHTML = '';
       return;
     }
-	showPanelUnlessHidden_(document.getElementById('breakdownPanel'));
+    showPanelUnlessHidden_(document.getElementById('breakdownPanel'));
     showPanelUnlessHidden_(document.getElementById('analysisPanel'));
     const palette = isDarkMode() ? SECTOR_PALETTE_DARK : SECTOR_PALETTE_LIGHT;
 
-    // Sector totals — top 7 by value, smaller sectors folded into "Other" (8-slot categorical ceiling)
+    // Sector totals — top 7 by value, smaller sectors folded into "Other"
     const bySector = {};
     stocks.forEach(s => {
       const k = s.sector || '—';
@@ -3140,8 +3146,7 @@
     }
     drawDonut('sectorDonut', 'donutLegend', donutEntries, palette);
 
-    // Market cap totals — fixed Large/Mid/Small order so a slice's color always means the same
-    // category regardless of which is biggest this refresh (color follows the entity, not its rank).
+    // Market cap totals — fixed Large/Mid/Small order
     const byCap = {};
     stocks.forEach(s => {
       const k = s.cap || '—';
@@ -3158,7 +3163,25 @@
     }
     drawDonut('capDonut', 'capDonutLegend', capEntries, palette);
 
-    // Movers, based on today's Day Gain per stock
+    // Index totals — grouped by stock's index property and sorted in your preferred manual sequence
+    const INDEX_DISPLAY_ORDER = ['Nifty 50', 'Nifty Next 50', 'Nifty Midcap 150', 'Nifty Smallcap 250'];
+    const byIndex = {};
+    stocks.forEach(s => {
+      const k = s.index || '—';
+      (byIndex[k] = byIndex[k] || []).push(s);
+    });
+    const indexEntries = Object.entries(byIndex)
+      .map(([k, list]) => [k, sumGroup(list)])
+      .sort((a, b) => {
+        const idxA = INDEX_DISPLAY_ORDER.indexOf(a[0]);
+        const idxB = INDEX_DISPLAY_ORDER.indexOf(b[0]);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a[0].localeCompare(b[0]);
+      });
+
+    // Movers stats
     const gaining = stocks.filter(s => isFinite(s.dayGain) && s.dayGain > 0);
     const losing = stocks.filter(s => isFinite(s.dayGain) && s.dayGain < 0);
     const flat = stocks.filter(s => isFinite(s.dayGain) && s.dayGain === 0);
@@ -3180,10 +3203,7 @@
       <div class="stat-row"><span class="figpct">${topSector ? ((topSector[1].value / total) * 100).toFixed(2) + '%' : '—'}</span> Top Sector &nbsp; <span class="stockname">${topSector ? topSector[0] : '—'}</span></div>
     `;
 
-    // ---- "Show Details" breakdown tables — full, unfolded sector/cap lists (not the donut's
-    // top-7-plus-Other), since the whole point of expanding this is the complete picture the
-    // donut's slot ceiling can't show. sectorEntries and capEntries are already the right shape
-    // ([name, {invested,value,gain,gainPct}]) — reused as-is, just rendered as rows instead of slices.
+    // Breakdown Table Rows Renderer
     const detailRowsHtml = entries => entries.map(([name, agg]) => `
       <tr>
         <td>${escapeHtmlText(name)}</td>
@@ -3205,14 +3225,22 @@
       </tr>`;
     };
 
+    // Render Sector Table
     document.getElementById('analysisSectorDetailBody').innerHTML = detailRowsHtml(sectorEntries);
     const sectorTotalInvested = sectorEntries.reduce((s, [, agg]) => s + agg.invested, 0);
     document.getElementById('analysisSectorDetailFoot').innerHTML = detailTotalRowHtml('Total', sectorTotalInvested, total);
 
+    // Render Market Cap Table
     document.getElementById('analysisCapDetailBody').innerHTML = detailRowsHtml(capEntries);
     const capTotalInvested = capEntries.reduce((s, [, agg]) => s + agg.invested, 0);
     const capTotalValue = capEntries.reduce((s, [, agg]) => s + agg.value, 0);
     document.getElementById('analysisCapDetailFoot').innerHTML = detailTotalRowHtml('Total', capTotalInvested, capTotalValue);
+
+    // Render Index Table
+    document.getElementById('analysisIndexDetailBody').innerHTML = detailRowsHtml(indexEntries);
+    const indexTotalInvested = indexEntries.reduce((s, [, agg]) => s + agg.invested, 0);
+    const indexTotalValue = indexEntries.reduce((s, [, agg]) => s + agg.value, 0);
+    document.getElementById('analysisIndexDetailFoot').innerHTML = detailTotalRowHtml('Total', indexTotalInvested, indexTotalValue);
   }
 
   // "Show Details" toggle for the Analysis panel — expands/collapses the sector-/cap-wise breakdown
