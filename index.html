@@ -874,6 +874,10 @@
       <label>Market Cap
         <select id="capFilterSelect" onchange="onFilterChange()"><option value="All">All</option></select>
       </label>
+      <!-- NEW Index Filter -->
+      <label>Index
+        <select id="indexFilterSelect" onchange="onFilterChange()"><option value="All">All</option></select>
+      </label>
       <button id="clearFilterBtn" onclick="clearFilters()" style="display:none">✕ Clear filter</button>
       <button type="button" class="stock-add-btn" onclick="openAddStockModal()" title="Add a new stock holding to your Portfolio sheet">+ Add Stock</button>
     </div>
@@ -1738,6 +1742,7 @@
   let moversPeriod = defaultMoversPeriod();
   let sectorFilter = 'All';
   let capFilter = 'All';
+  let indexFilter = 'All';
   // ---- Realized Gains — Period/Category/Item filter bar ----
   // Period defaults to the current Indian FY; the FY dropdown itself is recomputed fresh from "today"
   // (IST) on every render (see getFiscalYearOptions()) rather than stored anywhere, so the rolling
@@ -1764,7 +1769,7 @@
   // visible (marked fixed: true on its column def); everything else can be hidden per table. Persisted
   // to the "DashboardSettings" tab via the DashboardSettings.gs Web App so the choice survives across
   // devices/sessions — read once at startup by syncDashboardSettings(), written by saveColumnSettings().
-  const SETTINGS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwQPoVpfXS1_dJL-VsKDIFZX6zENvrNffqHWwg6Vy-HwPBv-i8z1Gq6YXfdsxwjeHBugA/exec';
+  const SETTINGS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzw4eNEWhab3GFc5ufWospD_P1h-qQnQ3bsdj1JAtqR2XtfzXg2hsFgKvXZrLZrcQZz4w/exec';
   const SETTINGS_TOKEN = 'CUy6OXWHBeaInxHcWjYjQD8aJ_kiyRxS';
 
   // ---- Edit Mode gate (UX only — see applyEditModeUI()) ---------------------
@@ -1849,6 +1854,7 @@
 
   const STOCKS_COLUMNS = [
     { key: 'symbol', label: 'Stock', fixed: true }, { key: 'sector', label: 'Sector' }, { key: 'cap', label: 'Mkt Cap' },
+	{ key: 'index', label: 'Index', title: 'Benchmark index associated with this stock' },
     { key: 'qty', label: 'Qty', num: true }, { key: 'buy', label: 'Buy', num: true }, { key: 'ltp', label: 'LTP', num: true },
     { key: 'sl', label: 'SL', num: true, title: 'Your stop-loss for this stock, from the "SL" column in the Portfolio tab — blank until you set one there' },
     { key: 'slPnl', label: 'SL P&L', num: true, title: 'What you\'d actually walk away with if your stop-loss triggers today — (SL − Buy Price) × Qty. Negative means still at-risk (your trailing stop hasn\'t cleared your buy price yet); positive means locked-in profit. Blank until SL is set.' },
@@ -2011,6 +2017,7 @@
         return `<td class="sym"><a class="sym-link" href="${screenerUrl(s.symbol)}" target="_blank" rel="noopener" title="Fundamentals on Screener.in">${escapeHtmlText(s.symbol)}</a><a class="sym-chart-link" href="${tradingViewUrl(s.symbol)}" target="_blank" rel="noopener" title="Technical chart on TradingView">📈</a>${slAlert ? `<span class="sl-flag" title="LTP (${fmtNum(s.ltp)}) is below SL (${fmtNum(s.sl)}) — stop triggered">🛑 SL</span>` : ''}<button type="button" class="row-edit-btn" onclick="openEditStockModal('${s.symbol.replace(/'/g, "\\'")}')" title="Edit Qty / Buy Price / SL">✎</button><button type="button" class="row-sell-btn" onclick="openSellStockModal('${s.symbol.replace(/'/g, "\\'")}')" title="Log Sale — appends to Sold Stocks, removes/reduces this Portfolio holding">💰</button></td>`;
       case 'sector': return `<td class="sec">${escapeHtmlText(s.sector)}</td>`;
       case 'cap': return `<td class="sec">${escapeHtmlText(s.cap.replace(' Cap', ''))}</td>`;
+	  case 'index': return `<td class="sec">${escapeHtmlText(s.index)}</td>`;
       case 'qty': return `<td class="num">${fmtNum(s.qty, 0)}</td>`;
       case 'buy': return `<td class="num">${fmtNum(s.buy)}</td>`;
       case 'ltp': return `<td class="num">${fmtNum(s.ltp)}</td>`;
@@ -2360,6 +2367,7 @@
           dayPct: num(pick(o, 'Day %', 'Day Gain %')) * 100,
           sector: pick(o, 'Sector') || '—',
           cap: pick(o, 'Market Cap') || '—',
+		  index: pick(o, 'Index') || '—',
           buyDate: parseGvizDate(pick(o, 'Buy Date', 'Purchase Date')),
           stage: (pick(o, 'Stage') || '').toString().trim(),
           maLines: (pick(o, 'MA Lines') || '').toString().trim(),
@@ -2514,39 +2522,52 @@
   function populateFilterOptions(stocks) {
     const sectorSel = document.getElementById('sectorFilterSelect');
     const capSel = document.getElementById('capFilterSelect');
+    const indexSel = document.getElementById('indexFilterSelect'); // <--- Added element reference
+    
     const sectors = ['All', ...new Set(stocks.map(s => s.sector).filter(Boolean))].sort((a, b) => a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b));
     const caps = ['All', ...new Set(stocks.map(s => s.cap).filter(Boolean))].sort((a, b) => a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b));
+    const indices = ['All', ...new Set(stocks.map(s => s.index).filter(Boolean))].sort((a, b) => a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b)); // <--- Added unique indices list
+
     const fill = (sel, values, current) => {
       sel.innerHTML = values.map(v => `<option value="${v}"${v === current ? ' selected' : ''}>${v}</option>`).join('');
       if (!values.includes(current)) sel.value = 'All';
     };
+    
     fill(sectorSel, sectors, sectorFilter);
     fill(capSel, caps, capFilter);
+    fill(indexSel, indices, indexFilter); // <--- Populate Index dropdown
+    
     if (!sectors.includes(sectorFilter)) sectorFilter = 'All';
     if (!caps.includes(capFilter)) capFilter = 'All';
-    document.getElementById('clearFilterBtn').style.display = (sectorFilter !== 'All' || capFilter !== 'All') ? 'inline-block' : 'none';
+    if (!indices.includes(indexFilter)) indexFilter = 'All'; // <--- Validate Index selection
+
+    document.getElementById('clearFilterBtn').style.display = (sectorFilter !== 'All' || capFilter !== 'All' || indexFilter !== 'All') ? 'inline-block' : 'none';
   }
 
   function onFilterChange() {
     sectorFilter = document.getElementById('sectorFilterSelect').value;
     capFilter = document.getElementById('capFilterSelect').value;
+	indexFilter = document.getElementById('indexFilterSelect').value;
     render(lastStocks, lastEtfs);
   }
   function clearFilters() {
-    sectorFilter = 'All'; capFilter = 'All';
+    sectorFilter = 'All'; capFilter = 'All'; indexFilter = 'All';
     render(lastStocks, lastEtfs);
   }
   function setSectorFilter(v) { sectorFilter = (sectorFilter === v) ? 'All' : v; render(lastStocks, lastEtfs); }
   function setCapFilter(v) { capFilter = (capFilter === v) ? 'All' : v; render(lastStocks, lastEtfs); }
+  function setIndexFilter(v) { indexFilter = (indexFilter === v) ? 'All' : v; render(lastStocks, lastEtfs); }
 
   function render(stocks, etfs) {
     // ---- Stocks table (full totals feed the top tiles; filtered subset feeds the table) ----
     populateFilterOptions(stocks);
     const visibleStocks = stocks.filter(s =>
       (sectorFilter === 'All' || s.sector === sectorFilter) &&
-      (capFilter === 'All' || s.cap === capFilter));
+      (capFilter === 'All' || s.cap === capFilter) &&
+      (indexFilter === 'All' || s.index === indexFilter)
+    );
 
-    const stocksAgg = computeAgg(stocks);           // whole stock book — drives tiles/bars
+    const stocksAgg = computeAgg(stocks);            // whole stock book — drives tiles/bars
     const stocksValue = stocksAgg.value;
     const stocksInvested = stocksAgg.invested;
     const stocksDayGain = stocksAgg.dayGain;
@@ -2563,9 +2584,6 @@
           ? (Math.pow(s.value / s.invested, 365 / s.daysHeld) - 1) * 100
           : NaN;
       } else {
-        // No usable date — either never set, or a Buy Date that lands in the future (almost always a
-        // day/month mix-up, e.g. "11/08/2026" typed as 11 Aug got stored as 8 Nov). Flagged in the UI
-        // rather than silently shown as "0d", and excluded from XIRR's precise-dates path below.
         s.daysHeld = NaN; s.ltEligible = null; s.annReturn = NaN;
       }
     });
@@ -2595,10 +2613,15 @@
     stocksMiniTodayPctEl.className = 'mini-subvalue ' + chgClass(stocksAgg.dayPct);
 
     const view = computeAgg(visibleStocks);          // filtered slice — drives the table
-    const isFiltered = sectorFilter !== 'All' || capFilter !== 'All';
-    const filterLabel = isFiltered
-      ? ` <span class="chg-flat">· filtered: ${sectorFilter !== 'All' ? sectorFilter : ''}${sectorFilter !== 'All' && capFilter !== 'All' ? ' + ' : ''}${capFilter !== 'All' ? capFilter : ''}</span>`
-      : '';
+    const isFiltered = sectorFilter !== 'All' || capFilter !== 'All' || indexFilter !== 'All';
+    
+    // Clean, readable filter label builder
+    let filterParts = [];
+    if (sectorFilter !== 'All') filterParts.push(sectorFilter);
+    if (capFilter !== 'All') filterParts.push(capFilter);
+    if (indexFilter !== 'All') filterParts.push(indexFilter);
+    const filterLabel = isFiltered ? ` <span class="chg-flat">· filtered: ${filterParts.join(' + ')}</span>` : '';
+
     const concentrationLabel = stocksConcentrated
       ? ` <span class="wt-flag">⚠ ${stocksConcentrated} holding${stocksConcentrated > 1 ? 's' : ''} over ${CONCENTRATION_THRESHOLD}%</span>`
       : '';
@@ -2625,9 +2648,6 @@
     const etfInvested = etfAgg.invested, etfValue = etfAgg.value, etfGain = etfAgg.gain;
     const etfGainPct = etfAgg.gainPct, etfDayGain = etfAgg.dayGain, etfDayPct = etfAgg.dayPct;
 
-    // Held / Ann. % for ETFs — ETF Summary has no Buy Date of its own, so this uses the earliest
-    // purchase lot for that symbol from the "ETF" ledger tab (same tab that gives XIRR precise dates).
-    // Falls back to '—' for a symbol with no lots in that tab, or if the tab isn't set up at all.
     etfs.forEach(e => {
       e.wt = etfValue ? (e.value / etfValue) * 100 : 0;
       const lots = lastEtfLots.filter(l => normSym(l.symbol) === normSym(e.symbol));
@@ -2720,26 +2740,15 @@
     const etfAllocEl = document.getElementById('etfBookAllocation');
     if (etfAllocEl) etfAllocEl.textContent = etfAllocPct !== null ? `${etfAllocPct.toFixed(1)}% of portfolio` : '—';
 
-    // ---- Stock Portfolio / ETF Portfolio split tiles — same Value/Gain/Today shape as the top tiles
-    // bar, scoped to just one book, side by side, so each book's numbers (and XIRR, below) don't require
-    // mentally subtracting the other book out of the combined totals above. ----
     renderBookSplitTile('stockBook', stocks.length, stocksInvested, stocksValue, stocksAgg.gain, stocksAgg.gainPct, stocksDayGain, stocksAgg.dayPct);
     renderBookSplitTile('etfBook', etfs.length, etfInvested, etfValue, etfGain, etfGainPct, etfDayGain, etfDayPct);
 
-    // ---- Sector / Market cap bars (stocks only, click a bar to filter the table above) ----
     renderGroupBars('sectorBars', stocks, s => s.sector, stocksInvested, stocksValue, 'sector', sectorFilter);
     renderGroupBars('marketCapBars', stocks, s => s.cap, stocksInvested, stocksValue, 'cap', capFilter);
 
-    // ---- Analysis: sector donut + movers/leaders panel (stocks only) ----
     renderAnalysis(stocks, stocksValue);
-
-    // ---- Portfolio Allocation: Stocks vs ETFs mix + combined sector donut ----
     renderAllocation(stocks, etfs, stocksValue, etfValue);
-
-    // ---- Today's Movers: biggest single-day gainer/loser across Stocks + ETFs ----
     renderTopMovers(stocks);
-
-    // ---- Portfolio XIRR: money-weighted annualized return, from each stock's Buy Date ----
     computeXirrTile();
   }
 
