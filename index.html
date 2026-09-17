@@ -2199,22 +2199,47 @@
       throw new Error(msg);
     }
     const table = resp.table;
-    const headers = table.cols.map(c => (c.label || '').trim());
-    return table.rows.map(r => {
+    let headers = table.cols.map(c => (c.label || '').replace(/^#\s*/, '').trim());
+
+    // If Google Table hid the labels in table.cols, extract them from the first row
+    let startRow = 0;
+    const hasEmptyLabels = headers.filter(Boolean).length < 3;
+    if (hasEmptyLabels && table.rows.length > 0) {
+      const firstRow = table.rows[0];
+      const candidateHeaders = firstRow.c.map(cell => cell && (cell.v || cell.f) ? String(cell.v || cell.f).trim() : '');
+      if (candidateHeaders.some(h => /Stock|Symbol|Qty|Price/i.test(h))) {
+        headers = candidateHeaders;
+        startRow = 1;
+      }
+    }
+
+    const rows = [];
+    for (let rowIndex = startRow; rowIndex < table.rows.length; rowIndex++) {
+      const r = table.rows[rowIndex];
       const o = {};
       headers.forEach((h, i) => {
         if (!h) return;
-        const cell = r.c[i];
-        o[h] = cell ? (cell.v !== null && cell.v !== undefined ? cell.v : '') : '';
+        const cell = r.c ? r.c[i] : null;
+        // Read raw value (cell.v) or formatted value (cell.f)
+        let val = '';
+        if (cell) {
+          val = (cell.v !== null && cell.v !== undefined) ? cell.v : (cell.f || '');
+        }
+        o[h] = val;
       });
-      return o;
-    });
+      rows.push(o);
+    }
+    return rows;
   }
 
   function pick(obj, ...names) {
+    if (!obj) return undefined;
+    const cleanStr = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     for (const n of names) {
+      const target = cleanStr(n);
       for (const k of Object.keys(obj)) {
-        if (k.toLowerCase().replace(/\s+/g, ' ').trim() === n.toLowerCase()) return obj[k];
+        const keyClean = cleanStr(k);
+        if (keyClean === target || keyClean.includes(target)) return obj[k];
       }
     }
     return undefined;
@@ -2350,50 +2375,68 @@
   }
 
   async function syncFromSheet() {
-    setStatus('syncing', 'Syncing…');
-    try {
-      const [stockRows, etfRows] = await Promise.all([
-        fetchSheet(STOCKS_SHEET_NAME),
-        fetchSheet(ETF_SHEET_NAME),
-      ]);
+  setStatus('syncing', 'Syncing…');
+  try {
+    const [stockRows, etfRows] = await Promise.all([
+      fetchSheet(STOCKS_SHEET_NAME),
+      fetchSheet(ETF_SHEET_NAME),
+    ]);
 
-      const stocks = extractHoldings(stockRows, ['Quantity']).map(x => {
-        const o = x.raw;
-        return {
-          symbol: x.symbol, qty: x.qty,
-          buy: num(pick(o, 'Buy Price')),
-          ltp: num(pick(o, 'Last Price')),
-          invested: num(pick(o, 'Invest Amt', 'Inv. Amt')),
-          value: num(pick(o, 'Latest Value', 'Latest')),
-          gain: num(pick(o, 'Overall Gain')),
-          gainPct: num(pick(o, 'Overall %', 'Overall Gain %')) * 100,
-          dayGain: num(pick(o, 'Day Gain')),
-          dayPct: num(pick(o, 'Day %', 'Day Gain %')) * 100,
-          sector: pick(o, 'Sector') || '—',
-          cap: pick(o, 'Market Cap') || '—',
-		  index: pick(o, 'Index') || '—',
-          buyDate: parseGvizDate(pick(o, 'Buy Date', 'Purchase Date')),
-          stage: (pick(o, 'Stage') || '').toString().trim(),
-          maLines: (pick(o, 'MA Lines') || '').toString().trim(),
-          sl: num(pick(o, 'SL')),
-          slPnl: num(pick(o, 'SL P&L')),
-        };
-      });
+    const stocks = extractHoldings(stockRows, ['Quantity']).map(x => {
+      const o = x.raw;
+      return {
+        symbol: x.symbol, qty: x.qty,
+        buy: num(pick(o, 'Buy Price')),
+        ltp: num(pick(o, 'Last Price', '# Last Price', 'LTP', 'Price', 'CMP', 'Latest Price')),
+        invested: num(pick(o, 'Invest Amt', 'Inv. Amt')),
+        value: num(pick(o, 'Latest Value', 'Latest')),
+        gain: num(pick(o, 'Overall Gain')),
+		gainPct: (function() {
+		  const inv = num(pick(o, 'Invest Amt', 'Inv. Amt'));
+		  const val = num(pick(o, 'Latest Value', 'Latest'));
+		  return (inv && isFinite(inv) && isFinite(val)) ? ((val - inv) / inv) * 100 : 0;
+		})(),
+		dayGain: num(pick(o, 'Day Gain')),
+		dayPct: (function() {
+		  const val = num(pick(o, 'Latest Value', 'Latest'));
+		  const dg = num(pick(o, 'Day Gain'));
+		  const prev = val - dg;
+		  return (prev && isFinite(prev) && isFinite(dg)) ? (dg / prev) * 100 : 0;
+		})(),
+				sector: pick(o, 'Sector') || '—',
+        cap: pick(o, 'Market Cap') || '—',
+        index: pick(o, 'Index') || '—',
+        buyDate: parseGvizDate(pick(o, 'Buy Date', 'Purchase Date')),
+        stage: (pick(o, 'Stage') || '').toString().trim(),
+        maLines: (pick(o, 'MA Lines') || '').toString().trim(),
+        sl: num(pick(o, 'SL')),
+        slPnl: num(pick(o, 'SL P&L')),
+      };
+    });
 
-      const etfs = extractHoldings(etfRows, ['Quantity']).map(x => {
-        const o = x.raw;
-        return {
-          symbol: x.symbol, qty: x.qty,
-          buy: num(pick(o, 'Buy Price')),
-          ltp: num(pick(o, 'Last Price')),
-          invested: num(pick(o, 'Inv. Amt', 'Invest Amt')),
-          value: num(pick(o, 'Latest', 'Latest Value')),
-          gain: num(pick(o, 'Overall Gain')),
-          gainPct: num(pick(o, 'Overall Gain %', 'Overall %')) * 100,
-          dayGain: num(pick(o, 'Day Gain')),
-          dayPct: num(pick(o, 'Day Gain %', 'Day %')) * 100,
-        };
-      });
+    const etfs = extractHoldings(etfRows, ['Quantity']).map(x => {
+      const o = x.raw;
+      return {
+        symbol: x.symbol, qty: x.qty,
+        buy: num(pick(o, 'Buy Price')),
+        ltp: num(pick(o, 'Last Price', '# Last Price', 'LTP', 'Price', 'CMP', 'Latest Price')),
+        invested: num(pick(o, 'Inv. Amt', 'Invest Amt')),
+        value: num(pick(o, 'Latest', 'Latest Value')),
+        gain: num(pick(o, 'Overall Gain')),
+		gainPct: (function() {
+		  const inv = num(pick(o, 'Inv. Amt', 'Invest Amt'));
+		  const val = num(pick(o, 'Latest', 'Latest Value'));
+		  return (inv && isFinite(inv) && isFinite(val)) ? ((val - inv) / inv) * 100 : 0;
+		})(),
+		dayGain: num(pick(o, 'Day Gain')),
+		dayPct: (function() {
+		  const val = num(pick(o, 'Latest', 'Latest Value'));
+		  const dg = num(pick(o, 'Day Gain'));
+		  const prev = val - dg;
+		  return (prev && isFinite(prev) && isFinite(dg)) ? (dg / prev) * 100 : 0;
+		})(),
+      };
+    });
 
       if (!stocks.length && !etfs.length) throw new Error('sheet returned no readable holding rows');
 
@@ -3434,7 +3477,7 @@
         const gainRaw = num(pick(o, 'Realized Gain'));
         const gain = isFinite(gainRaw) ? gainRaw : (saleValue - invested);
         const gainPctRaw = num(pick(o, 'Realized Gain %'));
-        const gainPct = isFinite(gainPctRaw) ? gainPctRaw * 100 : (invested ? (gain / invested) * 100 : NaN);
+        const gainPct = (invested && isFinite(invested) && isFinite(gain)) ? (gain / invested) * 100 : NaN;
         const holdingDaysRaw = num(pick(o, 'Holding Days'));
         const holdingDays = isFinite(holdingDaysRaw) ? holdingDaysRaw
           : (buyDate && sellDate ? Math.round((sellDate - buyDate) / 86400000) : NaN);
