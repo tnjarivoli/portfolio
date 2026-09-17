@@ -953,7 +953,26 @@
 
     </div>
   </div>
+  <!-- Sector, Market Cap & Index Allocation Bars -->
+  <div class="foot-grid" id="allocationBarsRow" style="margin-bottom: 22px; align-items: start;">
+    <!-- Left Column: Sector Allocation (grows with sectors) -->
+    <div class="panel" style="margin-bottom: 0;">
+      <h2>Sector Allocation <span class="meta">— Stocks, by weight</span></h2>
+      <div id="sectorBars" style="margin-top:12px"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
+    </div>
 
+    <!-- Right Column: Market Cap stacked above Index Allocation -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div class="panel" style="margin-bottom: 0;">
+        <h2>Market Cap Allocation <span class="meta">— Stocks, by weight</span></h2>
+        <div id="marketCapBars" style="margin-top:12px"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
+      </div>
+      <div class="panel" style="margin-bottom: 0;">
+        <h2>Index Allocation <span class="meta">— Stocks, by weight</span></h2>
+        <div id="indexBars" style="margin-top:12px"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
+      </div>
+    </div>
+  </div>
   <!-- Bottom Panel: Visual Donut Charts & Summary Stats -->
   <div class="panel" id="analysisPanel">
     <div class="panel-head">
@@ -1078,17 +1097,6 @@
     </table>
     </div>
     <div style="margin-top:8px;color:var(--text-muted);font-size:11px">Add symbols to the <b>Watchlist</b> tab in your sheet (column A) — the rest fills in once a day, pulled from Screener.in the same way as the Holdings table above.</div>
-  </div>
-
-  <div class="foot-grid" id="allocationBarsRow">
-    <div class="panel">
-      <h2>Sector Allocation <span class="meta">— Stocks, by weight</span></h2>
-      <div id="sectorBars" style="margin-top:12px"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
-    </div>
-    <div class="panel">
-      <h2>Market Cap Allocation <span class="meta">— Stocks, by weight</span></h2>
-      <div id="marketCapBars" style="margin-top:12px"><div class="skel" style="font-size:12.5px">Populates after first sync…</div></div>
-    </div>
   </div>
 
   <div class="panel" id="scorecardPanel" style="display:none">
@@ -2792,6 +2800,7 @@
 
     renderGroupBars('sectorBars', stocks, s => s.sector, stocksInvested, stocksValue, 'sector', sectorFilter);
     renderGroupBars('marketCapBars', stocks, s => s.cap, stocksInvested, stocksValue, 'cap', capFilter);
+    renderGroupBars('indexBars', stocks, s => s.index, stocksInvested, stocksValue, 'index', indexFilter);
 
     renderAnalysis(stocks, stocksValue);
     renderAllocation(stocks, etfs, stocksValue, etfValue);
@@ -3352,6 +3361,8 @@
   }
 
   function renderGroupBars(elId, stocks, keyFn, totalInvested, totalValue, filterKind, activeValue) {
+    const el = document.getElementById(elId);
+    if (!el) return;
     const groups = {};
     stocks.forEach(s => {
       const k = keyFn(s) || '—';
@@ -3359,12 +3370,31 @@
       groups[k].invested += isFinite(s.invested) ? s.invested : 0;
       groups[k].value += isFinite(s.value) ? s.value : 0;
     });
+
+    const INDEX_DISPLAY_ORDER = ['Nifty 50', 'Nifty Next 50', 'Nifty Midcap 150', 'Nifty Smallcap 250'];
+    const CAP_ORDER = ['Large Cap', 'Mid Cap', 'Small Cap'];
+
     const rows = Object.entries(groups)
       .map(([k, v]) => ({ k, wt: totalInvested ? (v.invested / totalInvested) * 100 : 0, gainPct: v.invested ? ((v.value - v.invested) / v.invested) * 100 : 0 }))
-      .sort((a, b) => b.wt - a.wt);
-    const maxWt = rows.length ? rows[0].wt : 1;
-    const setter = filterKind === 'sector' ? 'setSectorFilter' : 'setCapFilter';
-    document.getElementById(elId).innerHTML = rows.map(r => `
+      .sort((a, b) => {
+        if (filterKind === 'index') {
+          const idxA = INDEX_DISPLAY_ORDER.indexOf(a.k);
+          const idxB = INDEX_DISPLAY_ORDER.indexOf(b.k);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+        } else if (filterKind === 'cap') {
+          const idxA = CAP_ORDER.indexOf(a.k);
+          const idxB = CAP_ORDER.indexOf(b.k);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        }
+        return b.wt - a.wt;
+      });
+
+    const maxWt = rows.length ? Math.max(...rows.map(r => r.wt)) : 1;
+    const setter = filterKind === 'sector' ? 'setSectorFilter' : filterKind === 'cap' ? 'setCapFilter' : 'setIndexFilter';
+
+    el.innerHTML = rows.map(r => `
       <div class="bar-row${r.k === activeValue ? ' active' : ''}" onclick="${setter}('${r.k.replace(/'/g, "\\'")}')" title="Click to ${r.k === activeValue ? 'clear this' : 'filter by this'} ${filterKind}">
         <div class="bar-label" title="${r.k}">${r.k}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${maxWt ? (r.wt / maxWt) * 100 : 0}%"></div></div>
@@ -6406,12 +6436,12 @@
     { key: 'indicesMovers',         label: 'Market Indices & Portfolio Top Movers',     elementIds: ['indicesMoversRow'] },
     { key: 'stocksPortfolio',       label: 'Stocks Portfolio',                          elementIds: ['stocksPortfolioPanel'] },
     { key: 'breakdown',             label: 'Portfolio Breakdown & Valuation',             elementIds: ['breakdownPanel'] },
+	{ key: 'allocationBars',        label: 'Sector & Market Cap Allocation (bar charts)', elementIds: ['allocationBarsRow'] },
     { key: 'analysis',              label: 'Analysis (Sector / Market Cap donut charts)', elementIds: ['analysisPanel'] },
     { key: 'etfPortfolio',          label: 'ETF Portfolio',                             elementIds: ['etfPortfolioPanel'] },
     { key: 'allocation',            label: 'Portfolio Allocation',                      elementIds: ['allocationPanel'] },
     { key: 'fundamentalsHoldings',  label: 'Fundamentals / Technical (Holdings)',       elementIds: ['fundamentalsPanel'] },
-    { key: 'fundamentalsWatchlist', label: 'Fundamentals (Watchlist)',                  elementIds: ['watchlistPanel'] },
-    { key: 'allocationBars',        label: 'Sector & Market Cap Allocation (bar charts)', elementIds: ['allocationBarsRow'] },
+    { key: 'fundamentalsWatchlist', label: 'Fundamentals (Watchlist)',                  elementIds: ['watchlistPanel'] },   
     { key: 'realizedGains',         label: 'Realized Gains',                            elementIds: ['realizedGainsPanel'] },
     { key: 'insights',              label: 'Company Insights',                          elementIds: ['insightsPanel'] },
     { key: 'scorecard',             label: 'Growth Scorecard',                          elementIds: ['scorecardPanel'] },
