@@ -923,7 +923,7 @@
         <div>
           <div class="donut-title">Sector-wise breakdown</div>
           <div class="fy-table-wrap"><table class="fy-table" id="analysisSectorDetailTable" style="width:100%">
-            <thead><tr><th>Sector</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
+            <thead><tr><th>Sector</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th><th class="num">Weight %</th></tr></thead>
             <tbody id="analysisSectorDetailBody"></tbody>
             <tfoot id="analysisSectorDetailFoot"></tfoot>
           </table></div>
@@ -936,7 +936,7 @@
         <div>
           <div class="donut-title">Market Cap-wise breakdown</div>
           <div class="fy-table-wrap"><table class="fy-table" id="analysisCapDetailTable" style="width:100%">
-            <thead><tr><th>Market Cap</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
+            <thead><tr><th>Market Cap</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th><th class="num">Weight %</th></tr></thead>
             <tbody id="analysisCapDetailBody"></tbody>
             <tfoot id="analysisCapDetailFoot"></tfoot>
           </table></div>
@@ -944,7 +944,7 @@
         <div>
           <div class="donut-title">Index-wise breakdown</div>
           <div class="fy-table-wrap"><table class="fy-table" id="analysisIndexDetailTable" style="width:100%">
-            <thead><tr><th>Index</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th></tr></thead>
+            <thead><tr><th>Index</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Gain</th><th class="num">Gain %</th><th class="num">Weight %</th></tr></thead>
             <tbody id="analysisIndexDetailBody"></tbody>
             <tfoot id="analysisIndexDetailFoot"></tfoot>
           </table></div>
@@ -3256,14 +3256,19 @@
     `;
 
     // Breakdown Table Rows Renderer
-    const detailRowsHtml = entries => entries.map(([name, agg]) => `
+    // Breakdown Table Rows Renderer
+    const detailRowsHtml = (entries, totalVal) => entries.map(([name, agg]) => {
+      const wt = totalVal ? (agg.value / totalVal) * 100 : 0;
+      return `
       <tr>
         <td>${escapeHtmlText(name)}</td>
         <td class="num">${fmtMoney(agg.invested)}</td>
         <td class="num">${fmtMoney(agg.value)}</td>
         <td class="num ${chgClass(agg.gain)}">${agg.gain >= 0 ? '+' : ''}${fmtMoney(agg.gain)}</td>
         <td class="num ${chgClass(agg.gainPct)}">${fmtPct(agg.gainPct)}</td>
-      </tr>`).join('');
+        <td class="num">${fmtNum(wt, 2)}%</td>
+      </tr>`;
+    }).join('');
     const detailTotalRowHtml = (label, totalInvested, totalValue) => {
       const totalGain = totalValue - totalInvested;
       const totalGainPct = totalInvested ? (totalGain / totalInvested) * 100 : 0;
@@ -3274,24 +3279,25 @@
         <td class="num">${fmtMoney(totalValue)}</td>
         <td class="num ${chgClass(totalGain)}">${totalGain >= 0 ? '+' : ''}${fmtMoney(totalGain)}</td>
         <td class="num ${chgClass(totalGainPct)}">${fmtPct(totalGainPct)}</td>
+        <td class="num">100.00%</td>
       </tr>`;
     };
 
     // Render Sector Table
-    document.getElementById('analysisSectorDetailBody').innerHTML = detailRowsHtml(sectorEntries);
+    document.getElementById('analysisSectorDetailBody').innerHTML = detailRowsHtml(sectorEntries, total);
     const sectorTotalInvested = sectorEntries.reduce((s, [, agg]) => s + agg.invested, 0);
     document.getElementById('analysisSectorDetailFoot').innerHTML = detailTotalRowHtml('Total', sectorTotalInvested, total);
 
     // Render Market Cap Table
-    document.getElementById('analysisCapDetailBody').innerHTML = detailRowsHtml(capEntries);
     const capTotalInvested = capEntries.reduce((s, [, agg]) => s + agg.invested, 0);
     const capTotalValue = capEntries.reduce((s, [, agg]) => s + agg.value, 0);
+    document.getElementById('analysisCapDetailBody').innerHTML = detailRowsHtml(capEntries, capTotalValue);
     document.getElementById('analysisCapDetailFoot').innerHTML = detailTotalRowHtml('Total', capTotalInvested, capTotalValue);
 
     // Render Index Table
-    document.getElementById('analysisIndexDetailBody').innerHTML = detailRowsHtml(indexEntries);
     const indexTotalInvested = indexEntries.reduce((s, [, agg]) => s + agg.invested, 0);
     const indexTotalValue = indexEntries.reduce((s, [, agg]) => s + agg.value, 0);
+    document.getElementById('analysisIndexDetailBody').innerHTML = detailRowsHtml(indexEntries, indexTotalValue);
     document.getElementById('analysisIndexDetailFoot').innerHTML = detailTotalRowHtml('Total', indexTotalInvested, indexTotalValue);
   }
 
@@ -3955,15 +3961,17 @@
     {
       key: 'qtrEpsGrowth', label: 'Quarterly EPS Growth', group: 'growth', maxPoints: 20,
       note: 'Proxy: latest-quarter Net Profit YoY growth',
+      rule: '≥20% → 20 pts | 15–20% → 15 pts | 10–15% → 10 pts | <10% → 0 pts',
       score(r) {
         const v = r.profitYoyLatest;
         if (!isFinite(v)) return null;
-        const t = SCORECARD_THRESHOLDS.qtrEpsGrowth;
-        return { points: v >= t.full ? 20 : v >= t.half ? 10 : 0, text: fmtPct(v, 1) + ' YoY' };
+        const points = v >= 20 ? 20 : v >= 15 ? 15 : v >= 10 ? 10 : 0;
+        return { points, text: fmtPct(v, 1) + ' YoY' };
       },
     },
     {
       key: 'qtrSalesGrowth', label: 'Quarterly Sales Growth', group: 'growth', maxPoints: 15,
+      rule: '≥15% → 15 pts | 8–15% → 7.5 pts | <8% → 0 pts',
       score(r) {
         const v = r.salesYoyLatest;
         if (!isFinite(v)) return null;
@@ -3974,6 +3982,7 @@
     {
       key: 'annEpsGrowth', label: 'Annual EPS Growth', group: 'growth', maxPoints: 15,
       note: '3-year compounded (CAGR) EPS growth',
+      rule: '≥15% → 15 pts | 8–15% → 7.5 pts | <8% → 0 pts',
       score(r) {
         const v = r.eps3yr;
         if (!isFinite(v)) return null;
@@ -3984,6 +3993,7 @@
     {
       key: 'annSalesGrowth', label: 'Annual Sales Growth', group: 'growth', maxPoints: 10,
       note: '3-year compounded (CAGR) Sales growth',
+      rule: '≥12% → 10 pts | 6–12% → 5 pts | <6% → 0 pts',
       score(r) {
         const v = r.sales3yr;
         if (!isFinite(v)) return null;
@@ -3994,6 +4004,7 @@
     {
       key: 'epsGrowthAccel', label: 'EPS Acceleration', group: 'growth', maxPoints: 5,
       note: 'Is quarterly Net Profit YoY growth speeding up across the last 3 reported quarters?',
+      rule: 'Full acceleration (Q0 > Q-1 > Q-2) → 5 pts | Partial (Q0 > Q-2) → 2.5 pts | Otherwise → 0 pts',
       score(r) {
         const a = r.profitYoyQ2, b = r.profitYoyQ1, c = r.profitYoyLatest;
         if (!isFinite(a) || !isFinite(b) || !isFinite(c)) return null;
@@ -4004,6 +4015,7 @@
     {
       key: 'salesGrowthAccel', label: 'Sales Acceleration', group: 'growth', maxPoints: 5,
       note: 'Is quarterly Sales YoY growth speeding up across the last 3 reported quarters?',
+      rule: 'Full acceleration (Q0 > Q-1 > Q-2) → 5 pts | Partial (Q0 > Q-2) → 2.5 pts | Otherwise → 0 pts',
       score(r) {
         const a = r.salesYoyQ2, b = r.salesYoyQ1, c = r.salesYoyLatest;
         if (!isFinite(a) || !isFinite(b) || !isFinite(c)) return null;
@@ -4014,6 +4026,7 @@
     {
       key: 'roe', label: 'Return on Equity', group: 'quality', maxPoints: 15,
       note: '>20%→15 · 15–20%→12 · 12–15%→9 · 10–12%→6 · 8–10%→3 · <8%→0',
+      rule: '>20% → 15 pts | 15–20% → 12 pts | 12–15% → 9 pts | 10–12% → 6 pts | 8–10% → 3 pts | <8% → 0 pts',
       score(r) {
         const v = r.roe;
         if (!isFinite(v)) return null;
@@ -4024,23 +4037,19 @@
     {
       key: 'roeConsistency', label: 'ROE Consistency (3Y)', group: 'quality', maxPoints: 10,
       note: 'Years of the last 3 with ROE (or ROCE, for banks/NBFCs) above 15% — all 3 scores full, 2 of 3 scores half, fewer scores zero',
+      rule: 'All 3 years ≥15% → 10 pts | 2 of 3 years ≥15% → 5 pts | ≤1 year → 0 pts',
       score(r) {
         const y1 = r.roeHistY1, y2 = r.roeHistY2, y3 = r.roeHistY3;
         if (!isFinite(y1) || !isFinite(y2) || !isFinite(y3)) return null;
-        
-        // CHANGED: changed > 15 to >= 15
         const count = [y1, y2, y3].filter(v => v >= 15).length;
-        
         const points = count === 3 ? 10 : count === 2 ? 5 : 0;
         return { points, text: `${Math.round(y3)}% → ${Math.round(y2)}% → ${Math.round(y1)}%` };
       },
     },
     {
       key: 'qualityFifth', label: 'Margin Expansion (OPM) / Debt-to-Equity', group: 'quality', maxPoints: 5,
-      // Kept short deliberately — this generic note only ever shows when a criterion has no data for the
-      // row (see the label/note override in computeScorecardV2 below), and a long note here was wrapping
-      // to 3 lines and throwing off this row's vertical alignment vs. every other row in the table.
       note: 'Margin Expansion (Banks/NBFCs/Financials) or Debt-to-Equity (every other sector)',
+      rule: 'Financials: ≥+1pp → 5 pts, ≥-0.5pp → 2.5 pts | Non-Financials: D/E ≤0.3 → 5 pts, ≤1.0 → 2.5 pts',
       score(r) {
         if (isFinancialSector(r.sector)) {
           const v = r.opmYoyChg;
@@ -4051,7 +4060,8 @@
             points: v >= t.full ? 5 : v >= t.half ? 2.5 : 0,
             text: `${latest} (${v >= 0 ? '+' : ''}${fmtNum(v, 1)}pp YoY)`,
             label: 'Margin Expansion (OPM)',
-            note: 'Latest-quarter Operating Profit Margin vs. the same quarter a year ago — Banks/NBFCs/Financials',
+            note: 'Latest-quarter Operating Profit Margin vs. same quarter year ago — Banks/NBFCs/Financials',
+            rule: '≥+1.0 pp → 5 pts | ≥-0.5 pp → 2.5 pts | <-0.5 pp → 0 pts',
           };
         }
         const v = r.debtToEquity;
@@ -4062,6 +4072,7 @@
           text: fmtNum(v, 2) + '×',
           label: 'Debt-to-Equity',
           note: 'Lower is better — non-financial sectors',
+          rule: '≤0.30× → 5 pts | ≤1.00× → 2.5 pts | >1.00× → 0 pts',
         };
       },
     },
@@ -4070,13 +4081,11 @@
   function computeScorecardV2(r) {
     const results = SCORECARD_CRITERIA_V2.map(c => {
       const res = c.score(r);
-      // A criterion's score() may return its own label/note to override the static definition — used by
-      // the sector-dependent 5th Quality criterion above, so the breakdown table shows "Margin Expansion"
-      // or "Debt-to-Equity" (whichever actually applied to that row) instead of the combined generic name.
       return {
         key: c.key,
         label: (res && res.label) || c.label,
         note: (res && res.note) || c.note,
+        rule: (res && res.rule) || c.rule || '', // <--- ADD THIS LINE
         group: c.group, maxPoints: c.maxPoints,
         available: !!res, points: res ? res.points : 0, text: res ? res.text : 'No data',
       };
@@ -4111,14 +4120,24 @@
   // Growth/Quality sections with a points column since credit is no longer a flat 0/½/1 per criterion.
   function buildScorecardBodyHtmlV2(score) {
     const g = scoreGradeV2(score.pct);
-    const rowHtml = c => {
-      const icon = !c.available ? '<span class="sc-icon sc-na" title="No data available for this criterion">–</span>'
-        : c.points >= c.maxPoints ? '<span class="sc-icon sc-pass" title="Full credit">✓</span>'
-        : c.points > 0 ? '<span class="sc-icon sc-partial" title="Partial credit">½</span>'
-        : '<span class="sc-icon sc-fail" title="No credit">✕</span>';
-      const ptsText = c.available ? `${fmtNum(c.points, 1)}/${c.maxPoints}` : `–/${c.maxPoints}`;
-      return `<tr><td>${icon}</td><td>${escapeHtmlText(c.label)}${c.note ? `<div class="sc-note">${escapeHtmlText(c.note)}</div>` : ''}</td><td class="num">${escapeHtmlText(c.text)}</td><td class="num">${ptsText}</td></tr>`;
-    };
+	const rowHtml = c => {
+	  const icon = !c.available ? '<span class="sc-icon sc-na" title="No data available for this criterion">–</span>'
+		: c.points >= c.maxPoints ? '<span class="sc-icon sc-pass" title="Full credit">✓</span>'
+		: c.points > 0 ? '<span class="sc-icon sc-partial" title="Partial credit">½</span>'
+		: '<span class="sc-icon sc-fail" title="No credit">✕</span>';
+	  const ptsText = c.available ? `${fmtNum(c.points, 1)}/${c.maxPoints}` : `–/${c.maxPoints}`;
+	  
+	  // Creates the tooltip string containing the scoring rule
+	  const tooltip = c.rule ? `Scoring Condition:\n${c.rule}` : '';
+
+	  // title="..." is added to both <tr> and the last <td>
+	  return `<tr title="${escapeAttr(tooltip)}" style="cursor:help;">
+		<td>${icon}</td>
+		<td>${escapeHtmlText(c.label)}${c.note ? `<div class="sc-note">${escapeHtmlText(c.note)}</div>` : ''}</td>
+		<td class="num">${escapeHtmlText(c.text)}</td>
+		<td class="num" title="${escapeAttr(tooltip)}">${ptsText}</td>
+	  </tr>`;
+	};
     const growthRows = score.criteria.filter(c => c.group === 'growth').map(rowHtml).join('');
     const qualityRows = score.criteria.filter(c => c.group === 'quality').map(rowHtml).join('');
 
