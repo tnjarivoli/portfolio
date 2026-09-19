@@ -3987,7 +3987,8 @@
         const v = r.eps3yr;
         if (!isFinite(v)) return null;
         const t = SCORECARD_THRESHOLDS.annEpsGrowth;
-        return { points: v >= t.full ? 15 : v >= t.half ? 7.5 : 0, text: fmtPct(v, 1) + ' 3Y CAGR' };
+        const formatted = (v >= 0 ? '+' : '') + Number(v).toFixed(1) + '%';
+        return { points: v >= t.full ? 15 : v >= t.half ? 7.5 : 0, text: formatted + ' 3Y CAGR' };
       },
     },
     {
@@ -3998,7 +3999,8 @@
         const v = r.sales3yr;
         if (!isFinite(v)) return null;
         const t = SCORECARD_THRESHOLDS.annSalesGrowth;
-        return { points: v >= t.full ? 10 : v >= t.half ? 5 : 0, text: fmtPct(v, 1) + ' 3Y CAGR' };
+        const formatted = (v >= 0 ? '+' : '') + Number(v).toFixed(1) + '%';
+        return { points: v >= t.full ? 10 : v >= t.half ? 5 : 0, text: formatted + ' 3Y CAGR' };
       },
     },
     {
@@ -4035,15 +4037,24 @@
       },
     },
     {
-      key: 'roeConsistency', label: 'ROE Consistency (3Y)', group: 'quality', maxPoints: 10,
-      note: 'Years of the last 3 with ROE (or ROCE, for banks/NBFCs) above 15% — all 3 scores full, 2 of 3 scores half, fewer scores zero',
+      key: 'roeConsistency', label: 'ROCE Consistency (3Y)', group: 'quality', maxPoints: 10,
+      note: 'Years of the last 3 with ROCE (ROE for banks/NBFCs) above 15% — all 3 scores full, 2 of 3 scores half, fewer scores zero',
       rule: 'All 3 years ≥15% → 10 pts | 2 of 3 years ≥15% → 5 pts | ≤1 year → 0 pts',
       score(r) {
+        const isFin = isFinancialSector(r.sector);
         const y1 = r.roeHistY1, y2 = r.roeHistY2, y3 = r.roeHistY3;
         if (!isFinite(y1) || !isFinite(y2) || !isFinite(y3)) return null;
         const count = [y1, y2, y3].filter(v => v >= 15).length;
         const points = count === 3 ? 10 : count === 2 ? 5 : 0;
-        return { points, text: `${Math.round(y3)}% → ${Math.round(y2)}% → ${Math.round(y1)}%` };
+        return {
+          points,
+          text: `${Math.round(y3)}% → ${Math.round(y2)}% → ${Math.round(y1)}%`,
+          label: isFin ? 'ROE Consistency (3Y)' : 'ROCE Consistency (3Y)',
+          note: isFin 
+            ? 'Years of the last 3 with ROE above 15% — Banks/NBFCs/Financials' 
+            : 'Years of the last 3 with ROCE above 15% — Non-financial sectors',
+          rule: 'All 3 years ≥15% → 10 pts | 2 of 3 years ≥15% → 5 pts | ≤1 year → 0 pts'
+        };
       },
     },
     {
@@ -4277,11 +4288,14 @@
   // project, so this rides the existing endpoint/URL rather than a new deployment). Read-only, no token
   // needed — same as the existing action=read call.
   function coerceLookupRow(row) {
-    // JSON has no NaN — the endpoint sends null for any criterion Screener.in didn't have, and
-    // isFinite(null) is true in JS, so every null must become NaN before computeScorecard() sees it, or a
-    // missing criterion would score as a fail (0) instead of being excluded from the denominator.
     const out = Object.assign({}, row);
-    Object.keys(out).forEach(k => { if (out[k] === null) out[k] = NaN; });
+    Object.keys(out).forEach(k => {
+      if (out[k] === null || out[k] === undefined || out[k] === '') {
+        out[k] = NaN;
+      } else if (typeof out[k] === 'string' && !isNaN(Number(out[k]))) {
+        out[k] = Number(out[k]);
+      }
+    });
     return out;
   }
 
