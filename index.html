@@ -585,6 +585,20 @@
   .footer-line { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-align: center; line-height: 1.6; }
   .skel { color: var(--text-muted); }
 
+  /* Quarterly Results Analysis UI Components */
+  .qtr-peak-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  @media (max-width: 680px) { .qtr-peak-grid { grid-template-columns: 1fr; } }
+  .qtr-peak-card { background: var(--page-plane); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .qtr-peak-card .qtr-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  .qtr-peak-card .qtr-val { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--text-primary); }
+  .qtr-peak-card .qtr-sub { font-size: 11.5px; color: var(--text-secondary); margin-top: 3px; }
+
+  .qtr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .qtr-table th { font-size: 10.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--surface-2); text-align: left; }
+  .qtr-table th.num, .qtr-table td.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
+  .qtr-table td { padding: 8px 10px; border-bottom: 1px solid var(--gridline); vertical-align: middle; }
+  .qtr-table tr:hover { background-color: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+  .qtr-metric-name { font-weight: 600; color: var(--text-primary); }
   .analysis-grid { display: flex; gap: 36px; align-items: flex-start; flex-wrap: wrap; }
   .donut-wrap { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
   .donut-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
@@ -1118,6 +1132,33 @@
     <div id="scorecardBody"></div>
     <div style="margin-top:14px;color:var(--text-muted);font-size:11px">Score = points earned out of the points available for criteria with data for that symbol — a symbol with data gaps is scored out of a smaller total rather than penalized for the gap. Growth (70 pts): Quarterly EPS Growth 20 · Quarterly Sales Growth 15 · Annual EPS Growth 15 · Annual Sales Growth 10 · EPS Acceleration 5 · Sales Acceleration 5. Quality (30 pts): Return on Equity 15 · ROE Consistency (3Y) 10 · 5th criterion 5 (Margin Expansion for Banks/NBFCs/Financials, Debt-to-Equity for every other sector — classified from the Stocks sheet's Sector column). Bands: 90+ Elite Growth Company · 80–89 Excellent · 75–79 Good · 70–74 Watchlist · below 70 Ignore. Thresholds are editable in the dashboard source (SCORECARD_THRESHOLDS, SCORECARD_CRITERIA_V2). The "Look up any stock" box above calls Screener.in live for a one-off symbol — it's a quick fundamentals sanity-check before you move to technicals, not something the dashboard tracks or refreshes automatically.</div>
   </div>
+
+  <!-- Quarterly Results Analysis Panel -->
+  <div class="panel" id="quarterlyAnalysisPanel">
+    <div class="panel-head">
+      <div class="panel-head-left">
+        <h2>Quarterly Results Analysis <span class="meta">— EPS breakout, revenue momentum &amp; operating trends</span></h2>
+        <div class="sub-meta" id="qtrAnalysisSubMeta">Select a stock below or query any symbol directly from Screener.in</div>
+      </div>
+    </div>
+    
+    <div class="scorecard-lookup-box">
+      <label for="qtrLookupInput">Stock Symbol</label>
+      <input type="text" id="qtrLookupInput" placeholder="e.g. TCS" maxlength="20"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();runQuarterlyAnalysis();}">
+      <button id="qtrLookupBtn" onclick="runQuarterlyAnalysis()">Analyze</button>
+      <span id="qtrLookupStatus" class="scorecard-lookup-status"></span>
+    </div>
+
+    <!-- Quick-select pills from portfolio -->
+    <div class="scorecard-symbol-row" id="qtrSymbolRow"></div>
+
+
+    <!-- Quarterly Analysis Results Area -->
+    <div id="qtrAnalysisBody">
+      <div class="skel" style="font-size:12.5px;padding:8px 0;">Enter a stock symbol above or pick a ticker to load quarterly results breakdown.</div>
+    </div>
+
 
   <div class="panel" id="realizedGainsPanel" style="display:none">
     <div class="panel-head">
@@ -7384,6 +7425,194 @@
     if (e.target.closest('.col-settings')) return;
     document.querySelectorAll('.col-settings-menu.show').forEach(m => m.classList.remove('show'));
   });
+
+  // --- Quarterly Results Analysis Controller ---
+  let selectedQtrSymbol = null;
+  let qtrAnalysisCache = new Map();
+
+  function populateQtrSymbolPills() {
+    const rowEl = document.getElementById('qtrSymbolRow');
+    if (!rowEl) return;
+    const symbols = [...new Set([...lastStocks.map(s => s.symbol), ...lastWatchlist.map(w => w.symbol)])].filter(Boolean);
+    if (!symbols.length) return;
+
+    rowEl.innerHTML = symbols.map(sym => 
+      `<button class="scorecard-symbol-btn${sym === selectedQtrSymbol ? ' active' : ''}" onclick="fetchQuarterlyForSymbol('${sym}')">${escapeHtmlText(sym)}</button>`
+    ).join('');
+  }
+
+  function fetchQuarterlyForSymbol(sym) {
+    document.getElementById('qtrLookupInput').value = sym;
+    runQuarterlyAnalysis();
+  }
+
+  // JSONP caller with 35s timeout to allow cold starts
+  let qtrJsonpSeq = 0;
+  function fetchQuarterlyJsonp(url) {
+    return new Promise((resolve, reject) => {
+      const cbName = `__qtrCB_${Date.now()}_${qtrJsonpSeq++}`;
+      const script = document.createElement('script');
+      let done = false;
+      const cleanup = () => { delete window[cbName]; script.remove(); clearTimeout(timer); };
+      const timer = setTimeout(() => { if (!done) { done = true; cleanup(); reject(new Error('Request timed out from Screener.in — please try once more')); } }, 35000);
+      window[cbName] = (resp) => { if (!done) { done = true; cleanup(); resolve(resp); } };
+      script.onerror = () => { if (!done) { done = true; cleanup(); reject(new Error('Backend error — verify new Web App version is deployed')); } };
+      script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function runQuarterlyAnalysis() {
+    const input = document.getElementById('qtrLookupInput');
+    const status = document.getElementById('qtrLookupStatus');
+    const body = document.getElementById('qtrAnalysisBody');
+    const btn = document.getElementById('qtrLookupBtn');
+    const sym = (input.value || '').trim().toUpperCase();
+
+    if (!sym) {
+      status.textContent = 'Enter a symbol first.';
+      status.className = 'scorecard-lookup-status err';
+      return;
+    }
+
+    selectedQtrSymbol = sym;
+    document.querySelectorAll('#qtrSymbolRow .scorecard-symbol-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.trim() === sym);
+    });
+
+    if (qtrAnalysisCache.has(sym)) {
+      status.textContent = '';
+      renderQuarterlyAnalysisData(qtrAnalysisCache.get(sym));
+      return;
+    }
+
+    btn.disabled = true;
+    status.textContent = `Analyzing ${sym}…`;
+    status.className = 'scorecard-lookup-status';
+
+    try {
+      // Small intentional pause to prevent Cloudflare rate-limiting back-to-back queries
+      await new Promise(r => setTimeout(r, 1000));
+      
+      const url = `${SETTINGS_WEBAPP_URL}?action=quarterlyAnalysis&symbol=${encodeURIComponent(sym)}`;
+      const data = await fetchQuarterlyJsonp(url);
+      
+      if (data.status !== 'ok') throw new Error(data.message || 'Data unavailable');
+
+      qtrAnalysisCache.set(sym, data);
+      status.textContent = '';
+      renderQuarterlyAnalysisData(data);
+    } catch (err) {
+      status.textContent = 'Analysis failed: ' + (err.message || err);
+      status.className = 'scorecard-lookup-status err';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderQuarterlyAnalysisData(data) {
+    const body = document.getElementById('qtrAnalysisBody');
+    const hasEpsGrowth = data.epsGrowthPct !== null && isFinite(data.epsGrowthPct);
+    const growthSign = hasEpsGrowth && data.epsGrowthPct > 0 ? '+' : '';
+    const isEpsBreakout = hasEpsGrowth && data.epsGrowthPct > 0;
+
+    const quarters = data.last3 || [];
+    const qHeaders = quarters.map(q => `<th class="num">${escapeHtmlText(q.quarter)}</th>`).join('');
+
+    const renderRow = (label, key, formatter, title = '') => {
+      const cells = quarters.map(q => {
+        const val = q[key];
+        const formatted = formatter(val);
+        const cls = (typeof val === 'number' && isFinite(val)) ? chgClass(val) : '';
+        return `<td class="num ${cls}">${formatted}</td>`;
+      }).join('');
+      return `<tr title="${escapeHtmlText(title)}"><td class="qtr-metric-name">${label}</td>${cells}</tr>`;
+    };
+
+    const safePct = v => (v !== null && isFinite(v)) ? fmtPct(v, 2) : '—';
+    const safeDiffPts = v => (v !== null && isFinite(v)) ? (v > 0 ? '+' : '') + v.toFixed(2) + ' pts' : '—';
+    const safeCr = v => (v !== null && isFinite(v)) ? '₹' + Math.round(v).toLocaleString('en-IN') + ' Cr' : '—';
+    const safeEps = v => (v !== null && isFinite(v)) ? '₹' + fmtNum(v, 2) : '—';
+
+    body.innerHTML = `
+      <!-- Prominent Stock Name Header Banner -->
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--gridline);padding-bottom:12px;margin-bottom:16px;">
+        <div>
+          <span style="font-size:16px;font-weight:800;color:var(--text-primary);letter-spacing:-0.01em;">${escapeHtmlText(data.companyName || data.symbol)}</span>
+          <span style="font-size:11.5px;font-weight:700;color:var(--seq-400);margin-left:8px;background:color-mix(in srgb, var(--seq-400) 12%, transparent);padding:2px 8px;border-radius:4px;">NSE: ${escapeHtmlText(data.symbol)}</span>
+        </div>
+        <a href="https://www.screener.in/company/${encodeURIComponent(data.symbol)}/" target="_blank" rel="noopener" style="font-size:11.5px;font-weight:600;color:var(--text-secondary);text-decoration:none;">View on Screener.in ↗</a>
+      </div>
+
+      <div class="qtr-peak-grid">
+        <div class="qtr-peak-card">
+          <div class="qtr-label">All-Time Peak EPS (Rank 1)</div>
+          <div class="qtr-val">₹${fmtNum(data.rank1.eps, 2)}</div>
+          <div class="qtr-sub">Reported in ${escapeHtmlText(data.rank1.quarter)}</div>
+        </div>
+        <div class="qtr-peak-card">
+          <div class="qtr-label">Secondary Peak (Rank 2)</div>
+          <div class="qtr-val">₹${fmtNum(data.rank2.eps, 2)}</div>
+          <div class="qtr-sub">Reported in ${escapeHtmlText(data.rank2.quarter)}</div>
+        </div>
+        <div class="qtr-peak-card">
+          <div class="qtr-label">EPS Breakout vs Peak</div>
+          <div class="qtr-val ${isEpsBreakout ? 'chg-up' : 'chg-down'}">
+            ${hasEpsGrowth ? `${growthSign}${fmtNum(data.epsGrowthPct, 2)}%` : '—'}
+          </div>
+          <div class="qtr-sub">Latest (${escapeHtmlText(data.recent.quarter)}) vs Reference (${escapeHtmlText(data.reference.quarter)})</div>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="qtr-table">
+          <thead>
+            <tr>
+              <th style="width:260px;">Quarterly Financial Performance</th>
+              ${qHeaders}
+            </tr>
+          </thead>
+          <tbody>
+            ${renderRow('Sales / Revenue', 'sales', safeCr)}
+            ${renderRow('YoY Sales Growth %', 'yoySales', safePct, 'Compared with same quarter last year')}
+            ${renderRow('QoQ Sales Growth %', 'qoqSales', safePct, 'Compared with preceding quarter')}
+            ${renderRow('Operating / Financing Profit', 'opProfit', safeCr)}
+            ${renderRow('YoY Operating Profit %', 'yoyOpProfit', safePct)}
+            ${renderRow('OPM / Financing Margin %', 'opm', v => (v !== null && isFinite(v)) ? fmtNum(v, 1) + '%' : '—')}
+            ${renderRow('Other Income', 'otherIncome', safeCr)}
+            ${renderRow('Net Profit', 'netProfit', safeCr)}
+            ${renderRow('YoY Profit Growth %', 'yoyProfit', safePct)}
+            ${renderRow('QoQ Profit Growth %', 'qoqProfit', safePct)}
+            ${renderRow('Net Margin %', 'netMargin', v => (v !== null && isFinite(v)) ? fmtNum(v, 2) + '%' : '—')}
+            ${renderRow('Net Margin YoY Diff', 'yoyNetMarginDiff', safeDiffPts, 'Points change from same quarter last year')}
+            ${renderRow('EPS in Rs', 'eps', safeEps)}
+            ${renderRow('YoY EPS Growth %', 'yoyEps', safePct)}
+            ${renderRow('QoQ EPS Growth %', 'qoqEps', safePct)}
+			${renderRow('EPS Vs Peak', 'epsVsPeak', safePct, 'Percentage difference compared to all-time peak EPS')}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;color:var(--text-muted);font-size:11px;">
+        Data sourced dynamically from Screener.in. Accommodates standalone and consolidated results.
+      </div>
+    `;
+  }
+
+  // Register into Panel Settings
+  if (!PANEL_GROUPS.some(g => g.key === 'quarterlyAnalysis')) {
+    PANEL_GROUPS.push({
+      key: 'quarterlyAnalysis',
+      label: 'Quarterly Results Analysis',
+      elementIds: ['quarterlyAnalysisPanel']
+    });
+  }
+
+  // Auto-refresh pills on sync
+  const baseRender = render;
+  render = function(s, e) {
+    baseRender(s, e);
+    populateQtrSymbolPills();
+  };
 
   // ---- Boot ----
   applyTheme(currentThemeMode()); // sync button label to whatever the pre-paint script set (or 'system' default)
