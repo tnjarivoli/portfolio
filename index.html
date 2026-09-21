@@ -584,7 +584,45 @@
 
   .footer-line { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-align: center; line-height: 1.6; }
   .skel { color: var(--text-muted); }
-
+  
+  /* High-Visibility Eye-Catching Note Banner */
+  .qtr-note-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: color-mix(in srgb, var(--seq-400) 9%, var(--surface-1));
+    border: 1px solid color-mix(in srgb, var(--seq-400) 28%, transparent);
+    border-left: 4px solid var(--seq-400);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .qtr-note-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #fff;
+    background: var(--seq-400);
+    padding: 3px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .qtr-note-text {
+    color: var(--text-primary);
+  }
+  .qtr-note-text strong {
+    font-weight: 700;
+    color: var(--seq-400);
+  }
+  
   /* Quarterly Results Analysis UI Components */
   .qtr-peak-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
   @media (max-width: 680px) { .qtr-peak-grid { grid-template-columns: 1fr; } }
@@ -1134,6 +1172,7 @@
   </div>
 
   <!-- Quarterly Results Analysis Panel -->
+  <!-- Quarterly Results Analysis Panel -->
   <div class="panel" id="quarterlyAnalysisPanel">
     <div class="panel-head">
       <div class="panel-head-left">
@@ -1142,6 +1181,11 @@
       </div>
     </div>
     
+    <!-- HIGH-VISIBILITY NOTE BANNER -->
+    <div class="qtr-note-banner">
+      <span class="qtr-note-badge">⚡ EPS Watch</span>
+      <span class="qtr-note-text">Look for a <strong>2-quarter base</strong> after a prior EPS peak, confirmed by <strong>back-to-back quarterly EPS breakouts</strong> to new highs.</span>
+    </div>
     <div class="scorecard-lookup-box">
       <label for="qtrLookupInput">Stock Symbol</label>
       <input type="text" id="qtrLookupInput" placeholder="e.g. TCS" maxlength="20"
