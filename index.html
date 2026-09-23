@@ -748,6 +748,68 @@
     font-weight: 700;
     color: var(--text-primary);
   }
+
+  /* Risk Stats Editable Inputs & Health Score Display */
+  .risk-stat-input {
+    border: 1px solid transparent;
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    width: 62px;
+    text-align: right;
+    padding: 1px 0;
+    outline: none;
+    border-radius: 4px;
+    color: inherit;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+  .risk-stat-input:hover,
+  .risk-stat-input:focus {
+    border-color: var(--baseline);
+    background: var(--surface-2);
+  }
+  .risk-stat-input::-webkit-outer-spin-button,
+  .risk-stat-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .risk-stat-input[type=number] {
+    -moz-appearance: textfield;
+  }
+  .risk-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .risk-score-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--gridline);
+    margin: 0 4px;
+  }
+  .score-display-box {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+  #scoreNum {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .score-max-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  #scoreLabel {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
   @media print {
     :root, :root[data-theme="dark"] {
       color-scheme: light;
@@ -1345,11 +1407,39 @@
         <h2>Stock Portfolio Risk Stats <span class="meta">— computed from your stock-only NAV history</span></h2>
         <div class="sub-meta" id="riskStatsSubMeta"></div>
       </div>
-      <div class="mini-tiles">
-        <div class="mini-tile" title="Largest peak-to-trough decline in your NAV over the tracked period"><div class="mini-label">Max Drawdown</div><div class="mini-value" id="riskMiniDrawdown">—</div></div>
-        <div class="mini-tile" title="Annualized standard deviation of daily NAV returns — how much your portfolio typically swings day to day, scaled to a yearly figure"><div class="mini-label">Ann. Volatility</div><div class="mini-value" id="riskMiniVol">—</div></div>
-        <div class="mini-tile" title="Largest single-day NAV gain in the tracked period"><div class="mini-label">Best Day</div><div class="mini-value" id="riskMiniBest">—</div></div>
-        <div class="mini-tile" title="Largest single-day NAV loss in the tracked period"><div class="mini-label">Worst Day</div><div class="mini-value" id="riskMiniWorst">—</div></div>
+      <div class="mini-tiles" style="align-items: center;">
+        <div class="mini-tile" title="Largest peak-to-trough decline in your NAV over the tracked period">
+          <div class="mini-label">Max Drawdown</div>
+          <div class="mini-value chg-down">
+            <input type="number" id="dd" class="risk-stat-input" value="6.2" step="0.1"><span class="risk-unit">%</span>
+          </div>
+        </div>
+        <div class="mini-tile" title="Annualized standard deviation of daily NAV returns">
+          <div class="mini-label">Ann. Volatility</div>
+          <div class="mini-value">
+            <input type="number" id="vol" class="risk-stat-input" value="14.4" step="0.1"><span class="risk-unit">%</span>
+          </div>
+        </div>
+        <div class="mini-tile" title="Largest single-day NAV gain in the tracked period">
+          <div class="mini-label">Best Day</div>
+          <div class="mini-value chg-up" id="bestWrap">
+            <input type="number" id="best" class="risk-stat-input" value="1.5" step="0.1"><span class="risk-unit">%</span>
+          </div>
+        </div>
+        <div class="mini-tile" title="Largest single-day NAV loss in the tracked period">
+          <div class="mini-label">Worst Day</div>
+          <div class="mini-value chg-down">
+            <input type="number" id="worst" class="risk-stat-input" value="-2.5" step="0.1"><span class="risk-unit">%</span>
+          </div>
+        </div>
+        <div class="risk-score-divider"></div>
+        <div class="mini-tile" style="text-align: right;">
+          <div class="mini-label">Health Score</div>
+          <div class="score-display-box">
+            <span id="scoreNum">–</span><span class="score-max-label">/100</span>
+          </div>
+          <div id="scoreLabel">Calculating…</div>
+        </div>
       </div>
     </div>
   </div>
@@ -5476,6 +5566,63 @@
     return { maxDrawdown: maxDD, ddPeakDate, ddTroughDate, annVolatility, best, worst, days: Math.round(days) };
   }
 
+  function clampScore(value, bestAt, worstAt) {
+    const t = (value - worstAt) / (bestAt - worstAt);
+    return Math.max(0, Math.min(100, t * 100));
+  }
+
+  function computeRiskScore() {
+    const ddEl = document.getElementById('dd');
+    const volEl = document.getElementById('vol');
+    const bestEl = document.getElementById('best');
+    const worstEl = document.getElementById('worst');
+    if (!ddEl || !volEl || !bestEl || !worstEl) return;
+
+    const dd    = Math.abs(parseFloat(ddEl.value)    || 0);
+    const vol   = Math.abs(parseFloat(volEl.value)   || 0);
+    const best  = parseFloat(bestEl.value)           || 0;
+    const worst = Math.abs(parseFloat(worstEl.value) || 0);
+
+    // Dynamic color indicator for Best Day
+    const bestWrap = document.getElementById('bestWrap');
+    if (bestWrap) {
+      bestWrap.className = 'mini-value ' + (best >= 0 ? 'chg-up' : 'chg-down');
+    }
+
+    const ddScore    = clampScore(dd, 0, 20);
+    const volScore   = clampScore(vol, 10, 35);
+    const worstScore = clampScore(worst, 0, 8);
+
+    const skewRatio = worst > 0 ? (best / worst) : (best > 0 ? 2 : 0);
+    const skewScore = clampScore(skewRatio, 1.0, 0);
+
+    const composite = (ddScore + volScore + worstScore + skewScore) / 4;
+
+    const numEl = document.getElementById('scoreNum');
+    const labelEl = document.getElementById('scoreLabel');
+    if (numEl) {
+      numEl.textContent = composite.toFixed(0);
+      numEl.style.color = composite >= 70 ? 'var(--status-good)' : composite >= 45 ? 'var(--status-warning)' : 'var(--status-critical)';
+    }
+
+    if (labelEl) {
+      let label = 'Healthy';
+      if (composite < 45) label = 'Elevated risk';
+      else if (composite < 70) label = 'Moderate';
+      labelEl.textContent = label;
+    }
+  }
+
+  function bindRiskInputsOnce() {
+    ['dd', 'vol', 'best', 'worst'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.bound) {
+        el.dataset.bound = '1';
+        el.addEventListener('input', computeRiskScore);
+      }
+    });
+  }
+
   function renderRiskStats(points) {
     const panel = document.getElementById('riskStatsPanel');
     const stats = computeRiskStats(points);
@@ -5483,34 +5630,32 @@
       showPanelUnlessHidden_(panel);
       document.getElementById('riskStatsSubMeta').textContent =
         `Available after ${RISK_STATS_MIN_DAYS} days of history — ${stats.insufficientDays} day${stats.insufficientDays === 1 ? '' : 's'} so far.`;
-      ['riskMiniDrawdown', 'riskMiniVol', 'riskMiniBest', 'riskMiniWorst'].forEach(id => { document.getElementById(id).textContent = '—'; });
       return;
     }
     showPanelUnlessHidden_(panel);
     document.getElementById('riskStatsSubMeta').textContent = `Over the last ${stats.days} days`;
 
-    const ddEl = document.getElementById('riskMiniDrawdown');
-    ddEl.textContent = fmtPct(stats.maxDrawdown, 1);
-    ddEl.className = 'mini-value ' + chgClass(stats.maxDrawdown);
-    ddEl.title = stats.maxDrawdown < 0
-      ? `${fmtDateShort(stats.ddPeakDate)} → ${fmtDateShort(stats.ddTroughDate)}`
-      : 'No decline observed yet';
+    bindRiskInputsOnce();
 
-    document.getElementById('riskMiniVol').textContent = fmtNum(stats.annVolatility, 1) + '%';
+    // Populate inputs from actual NAV statistics if not currently focused by user
+    const ddInput = document.getElementById('dd');
+    if (ddInput && document.activeElement !== ddInput) {
+      ddInput.value = Math.abs(stats.maxDrawdown).toFixed(1);
+    }
+    const volInput = document.getElementById('vol');
+    if (volInput && document.activeElement !== volInput) {
+      volInput.value = stats.annVolatility.toFixed(1);
+    }
+    const bestInput = document.getElementById('best');
+    if (bestInput && stats.best && document.activeElement !== bestInput) {
+      bestInput.value = stats.best.pct.toFixed(1);
+    }
+    const worstInput = document.getElementById('worst');
+    if (worstInput && stats.worst && document.activeElement !== worstInput) {
+      worstInput.value = (-Math.abs(stats.worst.pct)).toFixed(1);
+    }
 
-    const bestEl = document.getElementById('riskMiniBest');
-    if (stats.best) {
-      bestEl.textContent = fmtPct(stats.best.pct, 1);
-      bestEl.className = 'mini-value ' + chgClass(stats.best.pct);
-      bestEl.title = fmtDateShort(stats.best.date);
-    } else { bestEl.textContent = '—'; bestEl.title = ''; }
-
-    const worstEl = document.getElementById('riskMiniWorst');
-    if (stats.worst) {
-      worstEl.textContent = fmtPct(stats.worst.pct, 1);
-      worstEl.className = 'mini-value ' + chgClass(stats.worst.pct);
-      worstEl.title = fmtDateShort(stats.worst.date);
-    } else { worstEl.textContent = '—'; worstEl.title = ''; }
+    computeRiskScore();
   }
 
   function showHistoryEmpty() {
