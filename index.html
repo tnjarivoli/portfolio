@@ -4590,7 +4590,13 @@
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ token: SETTINGS_TOKEN, action: 'addWatchlist', symbol })
       });
-      const data = await resp.json();
+      const rawText = await resp.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        throw new Error(`Server returned status ${resp.status} (non-JSON): ${rawText.substring(0, 120)}...`);
+      }
       if (data.status !== 'ok') {
         status.textContent = data.message || 'Could not add — try again.';
         status.className = 'stock-modal-status err';
