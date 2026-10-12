@@ -91,9 +91,9 @@
   .theme-toggle:hover { color: var(--text-primary); border-color: var(--text-muted); }
 
   .status-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; letter-spacing: 0.01em; }
-  .status-pill.ok { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 12%, transparent); border: 1px solid color-mix(in srgb, var(--status-good) 24%, transparent); }
-  .status-pill.syncing { color: var(--seq-400); background: color-mix(in srgb, var(--seq-400) 12%, transparent); border: 1px solid color-mix(in srgb, var(--seq-400) 24%, transparent); }
-  .status-pill.err { color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 12%, transparent); border: 1px solid color-mix(in srgb, var(--status-critical) 24%, transparent); }
+  .status-pill.ok { color: var(--status-good); background: rgba(22, 163, 74, 0.12); border: 1px solid rgba(22, 163, 74, 0.24); }
+  .status-pill.syncing { color: var(--seq-400); background: rgba(37, 99, 235, 0.12); border: 1px solid rgba(37, 99, 235, 0.24); }
+  .status-pill.err { color: var(--status-critical); background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(220, 38, 38, 0.24); }
   .status-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .status-pill.syncing::before { animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -191,8 +191,8 @@
   .news-row .news-title { font-size: 13px; line-height: 1.4; color: var(--text-primary); text-decoration: none; }
   .news-row .news-title:hover { text-decoration: underline; }
   .news-row .news-meta { margin-top: 3px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .news-tag-earnings { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--seq-400); background: color-mix(in srgb, var(--seq-400) 14%, transparent); border-radius: 4px; padding: 1px 6px; }
-  .news-tag-guidance { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 14%, transparent); border-radius: 4px; padding: 1px 6px; }
+  .news-tag-earnings { ... background: rgba(37, 99, 235, 0.14); }
+  .news-tag-guidance { ... background: rgba(217, 119, 6, 0.14); }
 
   .insights-symbol-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
   .insights-symbol-btn { font-size: 11.5px; font-weight: 600; padding: 4px 11px; border-radius: 999px; background: var(--page-plane); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; font-family: inherit; }
@@ -214,11 +214,11 @@
   .insights-empty { font-size: 12.5px; color: var(--text-muted); }
 
   .scorecard-symbol-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
-  .scorecard-symbol-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; padding: 4px 8px 4px 11px; border-radius: 999px; background: var(--page-plane); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; font-family: inherit; }
+  .score-cell-btn { ... background: rgba(128, 128, 128, 0.14); }
   .scorecard-symbol-btn:hover:not(.active) { color: var(--text-primary); border-color: var(--text-muted); }
   .scorecard-symbol-btn.active { background: var(--surface-2); border-color: var(--text-muted); color: var(--text-primary); }
   .scorecard-wl-tag { font-size: 9px; font-weight: 700; color: var(--text-muted); }
-  .scorecard-pill-score { font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, currentColor 16%, transparent); }
+  .scorecard-pill-score { ... background: rgba(128, 128, 128, 0.16); }
   .scorecard-symbol-btn.grade-strong { color: var(--status-good); }
   .scorecard-symbol-btn.grade-good { color: var(--seq-400); }
   .scorecard-symbol-btn.grade-moderate { color: var(--status-warning); }
@@ -252,9 +252,9 @@
   .scorecard-table td:first-child { width: 24px; padding-right: 0; }
   .sc-note { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
   .sc-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: 800; }
-  .sc-icon.sc-pass { background: color-mix(in srgb, var(--status-good) 18%, transparent); color: var(--status-good); }
-  .sc-icon.sc-partial { background: color-mix(in srgb, var(--status-warning) 18%, transparent); color: var(--status-warning); }
-  .sc-icon.sc-fail { background: color-mix(in srgb, var(--status-critical) 18%, transparent); color: var(--status-critical); }
+  .sc-icon.sc-pass { background: rgba(22, 163, 74, 0.18); color: var(--status-good); }
+  .sc-icon.sc-partial { background: rgba(217, 119, 6, 0.18); color: var(--status-warning); }
+  .sc-icon.sc-fail { background: rgba(220, 38, 38, 0.18); color: var(--status-critical); }
   .sc-icon.sc-na { background: var(--page-plane); color: var(--text-muted); }
   .scorecard-table tr.sc-excluded td { color: var(--text-muted); }
   .scorecard-table tr.sc-group-head td { padding: 10px 8px 4px; border-top: none; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
@@ -502,8 +502,8 @@
   tr.row-sl-alert { color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 6%, transparent); }
   tr.row-sl-alert td.sym a.sym-link { color: var(--status-critical); }
   .ltcg-badge { display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: .02em; padding: 1.5px 5px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
-  .ltcg-lt { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 14%, transparent); }
-  .ltcg-st { color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 14%, transparent); }
+  .ltcg-lt { color: var(--status-good); background: rgba(22, 163, 74, 0.14); }
+  .ltcg-st { color: var(--status-warning); background: rgba(217, 119, 6, 0.14); }
   .holding-caveat { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin: -6px 0 12px; }
   .fy-caption { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
   .fy-caption .meta-note { color: var(--text-muted); font-size: 11px; }
@@ -1260,11 +1260,11 @@
     <div class="scorecard-symbol-row" id="qtrSymbolRow"></div>
 
 
-    <!-- Quarterly Analysis Results Area -->
+   <!-- Quarterly Analysis Results Area -->
     <div id="qtrAnalysisBody">
       <div class="skel" style="font-size:12.5px;padding:8px 0;">Enter a stock symbol above or pick a ticker to load quarterly results breakdown.</div>
     </div>
-
+  </div>
 
   <div class="panel" id="realizedGainsPanel" style="display:none">
     <div class="panel-head">
@@ -3593,10 +3593,11 @@
       // reinterprets them) — parsed explicitly by position, in LOCAL time. Deliberately not routed
       // through `new Date(string)` for these: that parses date-only ISO strings as UTC midnight,
       // which can land on the previous day for viewers west of UTC — explicit parsing sidesteps it.
-      const isoM = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);           // YYYY-MM-DD
+      const isoM = v.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
       if (isoM) return new Date(+isoM[1], +isoM[2] - 1, +isoM[3]);
-      const usM = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);          // MM/DD/YYYY
-      if (usM) return new Date(+usM[3], +usM[1] - 1, +usM[2]);
+      // Supports DD/MM/YYYY and DD-MM-YYYY (Indian format used in your sheet)
+      const inM = v.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+      if (inM) return new Date(+inM[3], +inM[2] - 1, +inM[1]);
       const parsed = new Date(v);
       if (!isNaN(parsed)) return parsed;
     }
@@ -5479,21 +5480,12 @@
       const points = rows
         .map(o => ({
           date: parseGvizDate(pick(o, 'Date')),
-          // Stock-only value/invested drive the NAV chart, CAGR, and risk stats — ETFs are a deliberate
-          // cushion against drawdowns, not a market-beating bet, so mixing them in would understate how
-          // the actual stock picks are doing against Nifty. Falls back to the combined Total columns for
-          // rows written before the split existed, though HISTORY_DATA_START already excludes those.
-          value: num(pick(o, 'Stocks Value', 'Total Value', 'Portfolio Value')),
+          value: num(pick(o, 'Stocks Value', 'Total Value', 'Portfolio Value', 'Latest Value', 'Latest')),
           nifty: num(pick(o, 'NiftyBees Price', 'Nifty Price', 'Nifty')),
-          invested: num(pick(o, 'Stocks Invested', 'Total Invested', 'Invested Amount', 'Total Invested Amount')),
+          invested: num(pick(o, 'Stocks Invested', 'Total Invested', 'Invested Amount', 'Total Invested Amount', 'Invest Amt')),
         }))
-        .filter(p => p.date && isFinite(p.value))
-        // Drop weekend/NSE-holiday snapshots (e.g. a daily trigger that fired on a non-trading day and
-        // recorded Friday's stale closing price again) — the chart should jump straight from the last
-        // trading day to the next one, never plot a flat "no movement" stretch across days markets were shut.
-        .filter(p => isNseTradingDay(p.date))
-        // Drop rows written before the sumColumn() fix — see HISTORY_DATA_START above.
-        .filter(p => p.date >= HISTORY_DATA_START);
+        .filter(p => p.date && isFinite(p.value));
+
       points.sort((a, b) => a.date - b.date);
       if (points.length < 2) {
         lastHistoryPoints = []; showHistoryEmpty(); computeXirrTile();
@@ -5749,8 +5741,9 @@
   // params, since syncHistory() and syncIndices() resolve independently (Promise.all) and each needs to
   // trigger a re-render as soon as its own data lands, without waiting on the other.
   function renderNavVsIndicesChart() {
+    showPanelUnlessHidden_(document.getElementById('navChartPanel'));
     const points = resamplePointsForPeriod(lastHistoryPoints, navChartPeriod);
-    if (!points.length) return; // syncHistory hasn't produced NAV points yet — leave the empty-state showing
+    if (!points.length) return;
 
     const W = 760, H = 220, padL = 46, padR = 14, padT = 14, padB = 26;
     const plotW = W - padL - padR, plotH = H - padT - padB;
@@ -6515,6 +6508,7 @@
     </body></html>`;
     download('portfolio-dashboard.doc', html, 'application/msword');
   }
+  
 
   // ---- Export: PDF (loads html2canvas + jsPDF from cdnjs on first use, then snapshots the dashboard) ----
   let pdfLibsPromise = null;
@@ -6750,7 +6744,7 @@
   function showPanelUnlessHidden_(panel) {
     if (!panel) return;
     const hidden = PANEL_GROUPS.some(g => hiddenPanelGroups.has(g.key) && g.elementIds.includes(panel.id));
-    if (!hidden) panel.style.display = '';
+    panel.style.display = hidden ? 'none' : '';
   }
 
   function panelSettingsStatus(text, cls) {
