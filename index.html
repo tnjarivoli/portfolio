@@ -1344,12 +1344,12 @@
       <div class="panel-head-left">
         <h2>Stock Portfolio NAV vs Market Indices <span class="meta">— indexed to 100, adjusted for money added or withdrawn; stocks only, ETFs excluded</span></h2>
       </div>
-      <div class="nav-index-toggles" id="navIndexToggles" title="Stock Portfolio NAV always shows — pick which indices to compare it against (at least one must stay checked); your choice is saved automatically">
-        <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 50" onchange="onNavIndexToggle(this)"> Nifty 50</label>
-        <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 500" onchange="onNavIndexToggle(this)"> Nifty 500</label>
-        <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty Midcap 150" onchange="onNavIndexToggle(this)"> Nifty Midcap 150</label>
-        <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 200" onchange="onNavIndexToggle(this)"> Nifty 200</label>
-      </div>
+		<div class="nav-index-toggles" id="navIndexToggles" title="Stock Portfolio NAV always shows — pick which indices to compare it against (at least one must stay checked); your choice is saved automatically">
+		  <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 50" onchange="onNavIndexToggle(this)"> Nifty 50</label>
+		  <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty 500" onchange="onNavIndexToggle(this)"> Nifty 500</label>
+		  <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty Midcap 150" onchange="onNavIndexToggle(this)"> Nifty Midcap 150</label>
+		  <label class="nav-toggle"><input type="checkbox" checked data-index="Nifty Smallcap 250" onchange="onNavIndexToggle(this)"> Nifty Smallcap 250</label>
+		</div>
       <div class="col-settings">
         <button type="button" class="col-settings-btn" id="navPeriodBtn" title="Chart period" onclick="togglePeriodMenu('nav')">⚙️</button>
         <div class="col-settings-menu period-settings-menu" id="navPeriodMenu">
@@ -1453,10 +1453,10 @@
         <button type="button" class="col-settings-btn" id="perfBenchmarkBtn" title="Choose benchmark index" onclick="togglePerfBenchmarkMenu()">📊</button>
         <div class="col-settings-menu period-settings-menu" id="perfBenchmarkMenu">
           <div class="cs-title">Benchmark</div>
-          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty 50" checked onchange="selectPerfBenchmark('Nifty 50')"> Nifty 50</label>
-          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty 500" onchange="selectPerfBenchmark('Nifty 500')"> Nifty 500</label>
-          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty Midcap 150" onchange="selectPerfBenchmark('Nifty Midcap 150')"> Nifty Midcap 150</label>
-          <label><input type="radio" name="perfBenchmarkRadio" value="Nifty 200" onchange="selectPerfBenchmark('Nifty 200')"> Nifty 200</label>
+			<label><input type="radio" name="perfBenchmarkRadio" value="Nifty 50" checked onchange="selectPerfBenchmark('Nifty 50')"> Nifty 50</label>
+			<label><input type="radio" name="perfBenchmarkRadio" value="Nifty 500" onchange="selectPerfBenchmark('Nifty 500')"> Nifty 500</label>
+			<label><input type="radio" name="perfBenchmarkRadio" value="Nifty Midcap 150" onchange="selectPerfBenchmark('Nifty Midcap 150')"> Nifty Midcap 150</label>
+			<label><input type="radio" name="perfBenchmarkRadio" value="Nifty Smallcap 250" onchange="selectPerfBenchmark('Nifty Smallcap 250')"> Nifty Smallcap 250</label>
           <div class="cs-actions"><span class="cs-status" id="perfBenchmarkStatus"></span></div>
         </div>
       </div>
@@ -1814,8 +1814,9 @@
   // always shows and has no checkbox; at least one index must stay checked (enforced in onNavIndexToggle).
   // The 4 keys here are also the full set of possible checkbox choices — matches the 4 hardcoded <input>s
   // in #navIndexToggles — reused below (NAV_TOGGLE_KEYS) as the whitelist when computing what to persist.
-  let navChartVisibleIndices = new Set(['Nifty 50', 'Nifty 500', 'Nifty Midcap 150', 'Nifty 200']);
-  const NAV_TOGGLE_KEYS = ['Nifty 50', 'Nifty 500', 'Nifty Midcap 150', 'Nifty 200'];
+  // Change from 'Nifty 200' to 'Nifty Smallcap 250'
+	let navChartVisibleIndices = new Set(['Nifty 50', 'Nifty 500', 'Nifty Midcap 150', 'Nifty Smallcap 250']);
+	const NAV_TOGGLE_KEYS = ['Nifty 50', 'Nifty 500', 'Nifty Midcap 150', 'Nifty Smallcap 250'];
 
   // Single-select period for the two charts below — 'daily' | 'weekly' | 'monthly' | 'yearly'. Each is
   // persisted to the sheet independently (gear icon on each panel) via saveChartPeriodSetting(), and
@@ -5657,15 +5658,15 @@
   }
 
   function showHistoryEmpty() {
-    document.getElementById('historyChartArea').innerHTML = `
-      <div class="history-empty" id="historyEmpty">
-        Building history — this chart plots your stock portfolio's value over time (ETFs excluded — they're
-        a cushion, not the benchmark) against Nifty 50, Nifty 500, Nifty Midcap 150, and Nifty 200. It needs at least 2
-        days of snapshots in the <b>History</b> tab; check back after tomorrow's snapshot lands, or ask
-        Claude for the one-time setup script if this is a fresh sheet.
-      </div>`;
-    document.getElementById('dailyPerfPanel').style.display = 'none';
-  }
+  document.getElementById('historyChartArea').innerHTML = `
+    <div class="history-empty" id="historyEmpty">
+      Building history — this chart plots your stock portfolio's value over time (ETFs excluded — they're
+      a cushion, not the benchmark) against Nifty 50, Nifty 500, Nifty Midcap 150, and Nifty Smallcap 250. It needs at least 2
+      days of snapshots in the <b>History</b> tab; check back after tomorrow's snapshot lands, or ask
+      Claude for the one-time setup script if this is a fresh sheet.
+    </div>`;
+	document.getElementById('dailyPerfPanel').style.display = 'none';
+	}
 
   function fmtDateShort(d) { return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }); }
 
